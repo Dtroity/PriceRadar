@@ -1,0 +1,12 @@
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+pydantic>=2.0.0
+pandas>=2.0.0
+pdfplumber>=0.10.0
+httpx>=0.25.0
+# Optional for image OCR:
+# pytesseract
+# Pillow
+# prophet>=1.1.0
+# xgboost>=2.0.0

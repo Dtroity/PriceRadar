@@ -25,6 +25,19 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE INDEX idx_products_normalized_name ON products(normalized_name);
 CREATE INDEX idx_products_is_priority ON products(is_priority);
 
+-- Product aliases: different names for the same canonical product per supplier
+CREATE TABLE IF NOT EXISTS product_aliases (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  supplier_name VARCHAR(255) NOT NULL,
+  alias_name VARCHAR(500) NOT NULL,
+  confidence DECIMAL(5, 2) NOT NULL DEFAULT 100.0
+);
+
+CREATE INDEX idx_product_aliases_product ON product_aliases(product_id);
+CREATE INDEX idx_product_aliases_supplier ON product_aliases(supplier_name);
+CREATE INDEX idx_product_aliases_alias_name ON product_aliases(alias_name);
+
 CREATE TABLE IF NOT EXISTS price_lists (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   supplier_id UUID NOT NULL REFERENCES suppliers(id) ON DELETE CASCADE,

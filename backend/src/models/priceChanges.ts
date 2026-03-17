@@ -2,6 +2,7 @@ import { pool } from '../db/pool.js';
 import type { PriceChange } from '../types/index.js';
 
 export interface PriceChangeFilters {
+  organizationId?: string;
   supplierId?: string;
   fromDate?: string;
   toDate?: string;
@@ -15,10 +16,20 @@ export async function createPriceChange(
   supplierId: string,
   oldPrice: number,
   newPrice: number,
-  isPriority: boolean
+  isPriority: boolean,
+  organizationId?: string
 ): Promise<PriceChange> {
   const changeValue = newPrice - oldPrice;
   const changePercent = oldPrice !== 0 ? (changeValue / oldPrice) * 100 : 0;
+  if (organizationId) {
+    const { rows } = await pool.query(
+      `INSERT INTO price_changes (organization_id, product_id, supplier_id, old_price, new_price, change_value, change_percent, is_priority)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, product_id, supplier_id, old_price, new_price, change_value, change_percent, is_priority, created_at`,
+      [organizationId, productId, supplierId, oldPrice, newPrice, changeValue, changePercent, isPriority]
+    );
+    return rows[0];
+  }
   const { rows } = await pool.query(
     `INSERT INTO price_changes (product_id, supplier_id, old_price, new_price, change_value, change_percent, is_priority)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -32,6 +43,10 @@ export async function getPriceChanges(filters: PriceChangeFilters = {}, limit = 
   const conditions: string[] = ['1=1'];
   const params: unknown[] = [];
   let idx = 1;
+  if (filters.organizationId) {
+    conditions.push(`pc.organization_id = $${idx++}`);
+    params.push(filters.organizationId);
+  }
   if (filters.supplierId) {
     conditions.push(`pc.supplier_id = $${idx++}`);
     params.push(filters.supplierId);

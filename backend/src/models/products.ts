@@ -1,7 +1,14 @@
 import { pool } from '../db/pool.js';
 import type { Product } from '../types/index.js';
 
-export async function getAllProducts(): Promise<Product[]> {
+export async function getAllProducts(organizationId?: string): Promise<Product[]> {
+  if (organizationId) {
+    const { rows } = await pool.query(
+      'SELECT id, name, normalized_name, is_priority, created_at FROM products WHERE organization_id = $1 ORDER BY is_priority DESC, name',
+      [organizationId]
+    );
+    return rows;
+  }
   const { rows } = await pool.query(
     'SELECT id, name, normalized_name, is_priority, created_at FROM products ORDER BY is_priority DESC, name'
   );
@@ -16,7 +23,14 @@ export async function getProductById(id: string): Promise<Product | null> {
   return rows[0] ?? null;
 }
 
-export async function findProductByNormalizedName(normalizedName: string): Promise<Product | null> {
+export async function findProductByNormalizedName(normalizedName: string, organizationId?: string): Promise<Product | null> {
+  if (organizationId) {
+    const { rows } = await pool.query(
+      'SELECT id, name, normalized_name, is_priority, created_at FROM products WHERE organization_id = $1 AND normalized_name = $2',
+      [organizationId, normalizedName]
+    );
+    return rows[0] ?? null;
+  }
   const { rows } = await pool.query(
     'SELECT id, name, normalized_name, is_priority, created_at FROM products WHERE normalized_name = $1',
     [normalizedName]
@@ -27,8 +41,17 @@ export async function findProductByNormalizedName(normalizedName: string): Promi
 export async function createProduct(
   name: string,
   normalizedName: string,
-  isPriority = false
+  isPriority = false,
+  organizationId?: string
 ): Promise<Product> {
+  if (organizationId) {
+    const { rows } = await pool.query(
+      `INSERT INTO products (organization_id, name, normalized_name, is_priority) VALUES ($1, $2, $3, $4)
+       RETURNING id, name, normalized_name, is_priority, created_at`,
+      [organizationId, name, normalizedName, isPriority]
+    );
+    return rows[0];
+  }
   const { rows } = await pool.query(
     `INSERT INTO products (name, normalized_name, is_priority) VALUES ($1, $2, $3)
      RETURNING id, name, normalized_name, is_priority, created_at`,
@@ -40,9 +63,10 @@ export async function createProduct(
 export async function findOrCreateProduct(
   name: string,
   normalizedName: string,
-  isPriority = false
+  isPriority = false,
+  organizationId?: string
 ): Promise<Product> {
-  const existing = await findProductByNormalizedName(normalizedName);
+  const existing = await findProductByNormalizedName(normalizedName, organizationId);
   if (existing) {
     if (isPriority && !existing.is_priority) {
       await pool.query('UPDATE products SET is_priority = TRUE WHERE id = $1', [existing.id]);
@@ -50,7 +74,7 @@ export async function findOrCreateProduct(
     }
     return existing;
   }
-  return createProduct(name, normalizedName, isPriority);
+  return createProduct(name, normalizedName, isPriority, organizationId);
 }
 
 export async function setProductPriority(productId: string, isPriority: boolean): Promise<void> {

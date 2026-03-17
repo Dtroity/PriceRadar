@@ -1,12 +1,14 @@
 import type { Job } from 'bullmq';
-import { parseBuffer } from '../parsers/index.js';
+import { runParserPipeline } from '../ai/parserPipeline.js';
 import * as suppliersModel from '../models/suppliers.js';
 import * as productsModel from '../models/products.js';
 import * as priceListsModel from '../models/priceLists.js';
 import * as pricesModel from '../models/prices.js';
 import { compareAndSaveChanges } from '../services/priceComparison.js';
 import { notifyPriceChange } from '../services/telegramNotify.js';
+import { recordFromPriceList } from '../services/supplierPricesHistory.js';
 import type { SourceType } from '../types/index.js';
+import { matchProductForRow } from '../product-matching/matchingService.js';
 import { readFile } from 'fs/promises';
 import path from 'path';
 
@@ -20,33 +22,38 @@ export interface UploadJobPayload {
   sourceType: SourceType;
   mimeType: string;
   originalName: string;
+  organizationId?: string;
 }
 
 export async function processUploadJob(job: Job<UploadJobPayload>): Promise<void> {
   const { filePath, supplierName, sourceType, mimeType, originalName } = job.data;
-  const buffer = await readFile(resolveFilePath(filePath));
-  const rows = await parseBuffer(buffer, mimeType, originalName);
+  const absPath = resolveFilePath(filePath);
+  const rows = await runParserPipeline({
+    filePath: absPath,
+    mimeType,
+    originalName,
+  });
   if (rows.length === 0) {
     job.log('No rows parsed');
     return;
   }
 
-  const supplier = await suppliersModel.findOrCreateSupplier(supplierName);
+  const organizationId = job.data.organizationId;
+  const supplier = organizationId
+    ? await import('../models/suppliers-mt.js').then((m) => m.findOrCreate(organizationId, supplierName))
+    : await suppliersModel.findOrCreateSupplier(supplierName);
   const uploadDate = new Date();
   const priceList = await priceListsModel.createPriceList(
     supplier.id,
     uploadDate,
     sourceType,
-    filePath
+    filePath,
+    organizationId
   );
 
   const priceItems: { product_id: string; price: number; currency: string }[] = [];
   for (const row of rows) {
-    const product = await productsModel.findOrCreateProduct(
-      row.product_name,
-      row.normalized_name,
-      false
-    );
+    const product = await matchProductForRow(row, supplier.name, organizationId);
     priceItems.push({
       product_id: product.id,
       price: row.price,
@@ -55,11 +62,19 @@ export async function processUploadJob(job: Job<UploadJobPayload>): Promise<void
   }
   await pricesModel.insertPrices(priceList.id, priceItems);
 
+  if (organizationId) {
+    try {
+      await recordFromPriceList(priceList.id);
+    } catch (e) {
+      job.log('supplier_prices_history record failed: ' + (e instanceof Error ? e.message : ''));
+    }
+  }
+
   const { changes } = await compareAndSaveChanges(
     supplier.id,
     priceList.id,
-    rows,
-    uploadDate
+    uploadDate,
+    job.data.organizationId
   );
 
   for (const ch of changes) {

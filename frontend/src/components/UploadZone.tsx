@@ -1,11 +1,13 @@
 import { useState, useRef } from 'react';
 import { api } from '../api/client';
+import { useT } from '../i18n/LocaleContext';
 
 interface UploadZoneProps {
   onUpload?: () => void;
 }
 
 export default function UploadZone({ onUpload }: UploadZoneProps) {
+  const t = useT();
   const [drag, setDrag] = useState(false);
   const [supplierName, setSupplierName] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -18,14 +20,14 @@ export default function UploadZone({ onUpload }: UploadZoneProps) {
     setUploading(true);
     try {
       await api.upload(file, supplierName || 'Unknown Supplier', 'web');
-      setMessage({ type: 'ok', text: 'File queued for processing.' });
+      setMessage({ type: 'ok', text: t('upload.queued') });
       setSupplierName('');
       if (inputRef.current) inputRef.current.value = '';
       onUpload?.();
     } catch (err) {
       setMessage({
         type: 'err',
-        text: err instanceof Error ? err.message : 'Upload failed',
+        text: err instanceof Error ? err.message : t('upload.failed'),
       });
     } finally {
       setUploading(false);
@@ -58,7 +60,7 @@ export default function UploadZone({ onUpload }: UploadZoneProps) {
       />
       <input
         type="text"
-        placeholder="Supplier name"
+        placeholder={t('upload.supplierPlaceholder')}
         value={supplierName}
         onChange={(e) => setSupplierName(e.target.value)}
         className="mb-3 w-full max-w-xs mx-auto px-3 py-2 border border-slate-300 rounded-lg text-sm block"
@@ -69,10 +71,10 @@ export default function UploadZone({ onUpload }: UploadZoneProps) {
         disabled={uploading}
         className="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-700 disabled:opacity-50"
       >
-        {uploading ? 'Uploading...' : 'Choose file or drag & drop'}
+        {uploading ? t('upload.uploading') : t('upload.chooseFile')}
       </button>
       <p className="mt-2 text-xs text-slate-500">
-        XLS, XLSX, CSV, PDF, DOC, DOCX
+        {t('upload.formats')}
       </p>
       {message && (
         <p

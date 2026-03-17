@@ -4,6 +4,7 @@ function getToken(): string | null {
   return localStorage.getItem('accessToken');
 }
 
+/** Exported for module endpoints (procurement, order-automation). */
 export async function request<T>(
   path: string,
   options: RequestInit = {}
@@ -65,10 +66,20 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       }),
+    loginWithOrg: (organizationSlug: string, email: string, password: string) =>
+      request<{ user: User; organization?: { id: string; name: string; slug: string }; accessToken: string; refreshToken: string }>('/auth/login-org', {
+        method: 'POST',
+        body: JSON.stringify({ email, password, organizationSlug }),
+      }),
     register: (email: string, password: string, role?: string) =>
       request<{ user: User; accessToken: string; refreshToken: string }>('/auth/register', {
         method: 'POST',
         body: JSON.stringify({ email, password, role: role || 'viewer' }),
+      }),
+    registerOrg: (organizationName: string, slug: string, email: string, password: string) =>
+      request<{ user: User; organization: { id: string; name: string; slug: string }; accessToken: string; refreshToken: string }>('/auth/register-org', {
+        method: 'POST',
+        body: JSON.stringify({ organizationName, slug, email, password }),
       }),
     logout: (refreshToken?: string) =>
       request<{ ok: boolean }>('/auth/logout', {
@@ -120,6 +131,38 @@ export const api = {
     remove: (id: string) =>
       request<{ ok: boolean }>(`/telegram/users/${id}`, { method: 'DELETE' }),
   },
+  documents: {
+    list: (status?: string) =>
+      request<Document[]>(`/documents${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+    get: (id: string) => request<Document & { items: DocumentItem[] }>(`/documents/${id}`),
+    upload: (file: File, sourceType: string) => {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('sourceType', sourceType);
+      const token = getToken();
+      return fetch(`${API}/documents/upload`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      }).then((r) => {
+        if (!r.ok) return r.json().then((d) => Promise.reject(new Error(d.error || 'Upload failed')));
+        return r.json();
+      }) as Promise<{ message: string; documentId: string }>;
+    },
+    patchItem: (
+      documentId: string,
+      itemId: string,
+      data: Partial<DocumentItem> & { save_feedback?: boolean; original_text?: string; corrected_text?: string }
+    ) =>
+      request<DocumentItem>(`/documents/${documentId}/items/${itemId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    confirm: (id: string) =>
+      request<{ message: string; status: string }>(`/documents/${id}/confirm`, {
+        method: 'POST',
+      }),
+  },
 };
 
 export interface User {
@@ -162,5 +205,36 @@ export interface TelegramUser {
   username: string | null;
   role: string;
   is_allowed: boolean;
+  created_at: string;
+}
+
+export interface Document {
+  id: string;
+  organization_id: string;
+  supplier_id: string | null;
+  supplier_name: string | null;
+  document_number: string | null;
+  document_date: string | null;
+  file_path: string;
+  source_type: string;
+  status: string;
+  confidence: number | null;
+  total_amount: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentItem {
+  id: string;
+  document_id: string;
+  line_index: number;
+  name: string | null;
+  quantity: number;
+  unit: string | null;
+  price: number | null;
+  sum: number | null;
+  vat: number | null;
+  product_id: string | null;
+  needs_review: boolean;
   created_at: string;
 }

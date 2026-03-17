@@ -1,4 +1,4 @@
-import { getAllowedTelegramIds } from '../models/telegramUsers.js';
+import { getAllowedTelegramIds, getAllowedTelegramIdsForOrg } from '../models/telegramUsers.js';
 import { config } from '../config.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,6 +34,48 @@ export async function notifyPriceChange(
     `Change: ${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(1)}%`;
 
   const chatIds = await getAllowedTelegramIds();
+  for (const chatId of chatIds) {
+    try {
+      await bot.sendMessage(chatId, text);
+    } catch (err) {
+      console.error('Telegram send error:', err);
+    }
+  }
+}
+
+export async function notifyLowStock(
+  organizationId: string,
+  productName: string,
+  daysRemaining: number,
+  recommendedQty: number,
+  supplierName: string,
+  expectedSavingsPct?: number
+): Promise<void> {
+  const bot = getTelegramBot();
+  if (!bot) return;
+  const chatIds = await getAllowedTelegramIdsForOrg(organizationId);
+  if (chatIds.length === 0) return;
+  const text =
+    `Low stock detected\n\n` +
+    `Product: ${productName}\n` +
+    `Stock remaining: ${daysRemaining.toFixed(1)} days\n\n` +
+    `Recommended order:\n${recommendedQty} kg from ${supplierName}\n` +
+    (expectedSavingsPct != null ? `Expected savings: ${expectedSavingsPct}%\n` : '');
+  for (const chatId of chatIds) {
+    try {
+      await bot.sendMessage(chatId, text);
+    } catch (err) {
+      console.error('Telegram send error:', err);
+    }
+  }
+}
+
+export async function notifyAutopilotOrder(organizationId: string, orderId: string, itemCount: number): Promise<void> {
+  const bot = getTelegramBot();
+  if (!bot) return;
+  const chatIds = await getAllowedTelegramIdsForOrg(organizationId);
+  if (chatIds.length === 0) return;
+  const text = `Autopilot generated order\n\nOrder ID: ${orderId.slice(0, 8)}…\nItems: ${itemCount}`;
   for (const chatId of chatIds) {
     try {
       await bot.sendMessage(chatId, text);

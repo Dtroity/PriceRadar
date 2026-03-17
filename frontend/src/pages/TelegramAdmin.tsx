@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { api, type TelegramUser } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { useT } from '../i18n/LocaleContext';
 
 export default function TelegramAdmin() {
   const { user } = useAuth();
+  const t = useT();
   const [users, setUsers] = useState<TelegramUser[]>([]);
   const [status, setStatus] = useState<{ enabled: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
 
   if (user?.role !== 'admin') {
     return (
-      <div className="p-4 text-slate-600">Access denied. Admin only.</div>
+      <div className="p-4 text-slate-600">{t('telegram.accessDenied')}</div>
     );
   }
 
@@ -48,7 +50,7 @@ export default function TelegramAdmin() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Remove this user?')) return;
+    if (!confirm(t('telegram.removeConfirm'))) return;
     try {
       await api.telegram.remove(id);
       setUsers((prev) => prev.filter((u) => u.id !== id));
@@ -59,34 +61,33 @@ export default function TelegramAdmin() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-slate-800">Telegram Bot</h1>
+      <h1 className="text-xl font-semibold text-slate-800">{t('telegram.title')}</h1>
       {status && (
         <p className="text-sm text-slate-600">
-          Bot status: {status.enabled ? 'Enabled' : 'Disabled'}
+          {t('telegram.botStatus')}: {status.enabled ? t('telegram.enabled') : t('telegram.disabled')}
         </p>
       )}
       <p className="text-sm text-slate-500">
-        Users who have contacted the bot appear below. Allow access so they can
-        use /upload and send files.
+        {t('telegram.usersDescription')}
       </p>
       {loading ? (
-        <p className="text-slate-500">Loading...</p>
+        <p className="text-slate-500">{t('common.loading')}</p>
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="text-left py-3 px-4 font-medium">Telegram ID</th>
-                <th className="text-left py-3 px-4 font-medium">Username</th>
-                <th className="text-left py-3 px-4 font-medium">Allowed</th>
-                <th className="text-left py-3 px-4 font-medium">Actions</th>
+                <th className="text-left py-3 px-4 font-medium">{t('telegram.telegramId')}</th>
+                <th className="text-left py-3 px-4 font-medium">{t('telegram.username')}</th>
+                <th className="text-left py-3 px-4 font-medium">{t('telegram.allowed')}</th>
+                <th className="text-left py-3 px-4 font-medium">{t('telegram.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {users.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-6 text-center text-slate-500">
-                    No users yet. They will appear after contacting the bot.
+                    {t('telegram.noUsers')}
                   </td>
                 </tr>
               ) : (
@@ -104,7 +105,7 @@ export default function TelegramAdmin() {
                             : 'bg-slate-100 text-slate-600'
                         }`}
                       >
-                        {u.is_allowed ? 'Yes' : 'No'}
+                        {u.is_allowed ? t('telegram.yes') : t('telegram.no')}
                       </button>
                     </td>
                     <td className="py-3 px-4">
@@ -113,7 +114,7 @@ export default function TelegramAdmin() {
                         onClick={() => remove(u.id)}
                         className="text-red-600 hover:underline text-xs"
                       >
-                        Remove
+                        {t('telegram.remove')}
                       </button>
                     </td>
                   </tr>

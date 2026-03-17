@@ -24,4 +24,6 @@ export const config = {
     maxFileSize: 20 * 1024 * 1024, // 20MB
   },
   frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+  multiTenant: process.env.MULTI_TENANT === 'true',
+  aiServiceUrl: process.env.AI_SERVICE_URL ?? 'http://localhost:8000',
 } as const;

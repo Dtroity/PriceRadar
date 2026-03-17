@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api, type PriceChange, type Supplier } from '../api/client';
+import { useT } from '../i18n/LocaleContext';
 import UploadZone from '../components/UploadZone';
 
 export default function Dashboard() {
+  const t = useT();
   const [changes, setChanges] = useState<PriceChange[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,23 +44,27 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-slate-800">Dashboard</h1>
+      <header className="text-center py-4">
+        <h1 className="text-2xl font-bold text-slate-800 uppercase tracking-wide">{t('app.name')}</h1>
+        <p className="text-slate-600 mt-1">{t('app.tagline')}</p>
+        <p className="text-sm text-slate-500 mt-3 max-w-2xl mx-auto">{t('app.welcomeDescription')}</p>
+      </header>
 
       <UploadZone onUpload={load} />
 
       <section className="grid gap-4 md:grid-cols-3">
         <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <p className="text-sm text-slate-500">Priority changes</p>
+          <p className="text-sm text-slate-500">{t('dashboard.priorityChanges')}</p>
           <p className="text-2xl font-semibold text-amber-600">{priorityChanges.length}</p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <p className="text-sm text-slate-500">Largest increase</p>
+          <p className="text-sm text-slate-500">{t('dashboard.largestIncrease')}</p>
           <p className="text-2xl font-semibold text-red-600">
             {increases[0] ? `+${increases[0].change_percent.toFixed(1)}%` : '—'}
           </p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <p className="text-sm text-slate-500">Largest decrease</p>
+          <p className="text-sm text-slate-500">{t('dashboard.largestDecrease')}</p>
           <p className="text-2xl font-semibold text-emerald-600">
             {decreases[0] ? `${decreases[0].change_percent.toFixed(1)}%` : '—'}
           </p>
@@ -71,7 +77,7 @@ export default function Dashboard() {
           onChange={(e) => setSupplierId(e.target.value)}
           className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
         >
-          <option value="">All suppliers</option>
+          <option value="">{t('dashboard.allSuppliers')}</option>
           {suppliers.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
@@ -85,7 +91,7 @@ export default function Dashboard() {
             onChange={(e) => setPriorityOnly(e.target.checked)}
             className="rounded border-slate-300"
           />
-          Priority only
+          {t('dashboard.priorityOnly')}
         </label>
         <input
           type="date"
@@ -106,25 +112,25 @@ export default function Dashboard() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="text-left py-3 px-4 font-medium text-slate-700">Product</th>
-                <th className="text-left py-3 px-4 font-medium text-slate-700">Supplier</th>
-                <th className="text-right py-3 px-4 font-medium text-slate-700">Old</th>
-                <th className="text-right py-3 px-4 font-medium text-slate-700">New</th>
-                <th className="text-right py-3 px-4 font-medium text-slate-700">Change %</th>
-                <th className="text-left py-3 px-4 font-medium text-slate-700">Date</th>
+                <th className="text-left py-3 px-4 font-medium text-slate-700">{t('dashboard.product')}</th>
+                <th className="text-left py-3 px-4 font-medium text-slate-700">{t('dashboard.supplier')}</th>
+                <th className="text-right py-3 px-4 font-medium text-slate-700">{t('dashboard.old')}</th>
+                <th className="text-right py-3 px-4 font-medium text-slate-700">{t('dashboard.new')}</th>
+                <th className="text-right py-3 px-4 font-medium text-slate-700">{t('dashboard.changePercent')}</th>
+                <th className="text-left py-3 px-4 font-medium text-slate-700">{t('dashboard.date')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-slate-500">
-                    Loading...
+                    {t('dashboard.loading')}
                   </td>
                 </tr>
               ) : changes.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-slate-500">
-                    No price changes
+                    {t('dashboard.noPriceChanges')}
                   </td>
                 </tr>
               ) : (
@@ -138,7 +144,7 @@ export default function Dashboard() {
                     <td className="py-3 px-4">
                       <span className="font-medium text-slate-800">{c.product_name}</span>
                       {c.is_priority && (
-                        <span className="ml-2 text-amber-600 text-xs">Priority</span>
+                        <span className="ml-2 text-amber-600 text-xs">{t('dashboard.priority')}</span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-slate-600">{c.supplier_name}</td>

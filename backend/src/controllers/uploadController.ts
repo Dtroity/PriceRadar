@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { uploadQueue } from '../workers/queue.js';
-import { config } from '../config.js';
+import type { AuthRequest } from '../auth/middleware.js';
+
 export async function upload(req: Request, res: Response) {
   try {
     const file = req.file;
@@ -12,6 +13,8 @@ export async function upload(req: Request, res: Response) {
     if (!['web', 'telegram', 'camera'].includes(sourceType)) {
       return res.status(400).json({ error: 'Invalid sourceType' });
     }
+    const authReq = req as AuthRequest;
+    const organizationId = authReq.user?.organizationId;
 
     const job = await uploadQueue.add(
       'process',
@@ -21,6 +24,7 @@ export async function upload(req: Request, res: Response) {
         sourceType: sourceType as 'web' | 'telegram' | 'camera',
         mimeType: file.mimetype,
         originalName: file.originalname,
+        ...(organizationId && { organizationId }),
       },
       { attempts: 2, backoff: { type: 'exponential', delay: 2000 } }
     );

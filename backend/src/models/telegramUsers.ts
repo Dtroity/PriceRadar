@@ -3,10 +3,11 @@ import type { TelegramUser } from '../types/index.js';
 
 export async function getTelegramUserByTelegramId(telegramId: string): Promise<TelegramUser | null> {
   const { rows } = await pool.query(
-    'SELECT id, telegram_id, username, role, is_allowed, created_at FROM telegram_users WHERE telegram_id = $1',
+    'SELECT id, telegram_id, username, role, is_allowed, created_at, organization_id FROM telegram_users WHERE telegram_id = $1 LIMIT 1',
     [telegramId]
   );
-  return rows[0] ?? null;
+  const r = rows[0];
+  return r ? { ...r, organization_id: r.organization_id ?? '' } : null;
 }
 
 export async function getAllTelegramUsers(): Promise<TelegramUser[]> {
@@ -50,4 +51,16 @@ export async function getAllowedTelegramIds(): Promise<string[]> {
     'SELECT telegram_id FROM telegram_users WHERE is_allowed = TRUE'
   );
   return rows.map((r: { telegram_id: string }) => r.telegram_id);
+}
+
+export async function getAllowedTelegramIdsForOrg(organizationId: string): Promise<string[]> {
+  try {
+    const { rows } = await pool.query(
+      'SELECT telegram_id FROM telegram_users WHERE organization_id = $1 AND is_allowed = TRUE',
+      [organizationId]
+    );
+    return rows.map((r: { telegram_id: string }) => r.telegram_id);
+  } catch {
+    return [];
+  }
 }
