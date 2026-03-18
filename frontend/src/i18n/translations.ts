@@ -3,7 +3,7 @@ export type Locale = 'ru' | 'en';
 export const translations: Record<Locale, Record<string, string>> = {
   ru: {
     'app.name': 'Провиатор',
-    'app.tagline': 'AI-платформа управления закупками ресторана',
+    'app.tagline': 'AI-платформа управления закупками',
     'app.welcomeDescription': 'Автоматизация закупок, контроль цен поставщиков, обработка накладных и управление себестоимостью кухни.',
     'app.poweredBy': 'Powered by VizoR360',
     'nav.dashboard': 'Главная',
@@ -26,7 +26,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'auth.signingIn': 'Вход...',
     'auth.email': 'Email',
     'auth.password': 'Пароль',
-    'auth.workspaceSlug': 'Рабочее пространство (slug, необязательно)',
+    'auth.workspaceSlug': 'Рабочее пространство (необязательно)',
     'auth.workspacePlaceholder': 'restaurant-name',
     'auth.registerLink': 'Новое пространство?',
     'auth.register': 'Регистрация',
@@ -172,7 +172,7 @@ export const translations: Record<Locale, Record<string, string>> = {
   },
   en: {
     'app.name': 'Proviator',
-    'app.tagline': 'AI platform for restaurant procurement',
+    'app.tagline': 'AI procurement management platform',
     'app.welcomeDescription': 'Procurement automation, supplier price control, invoice processing and kitchen cost management.',
     'app.poweredBy': 'Powered by VizoR360',
     'nav.dashboard': 'Dashboard',
@@ -195,7 +195,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'auth.signingIn': 'Signing in...',
     'auth.email': 'Email',
     'auth.password': 'Password',
-    'auth.workspaceSlug': 'Workspace (slug, optional)',
+    'auth.workspaceSlug': 'Workspace (optional)',
     'auth.workspacePlaceholder': 'restaurant-name',
     'auth.registerLink': 'New workspace?',
     'auth.register': 'Register',
