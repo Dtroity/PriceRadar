@@ -108,7 +108,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'procurement.noOrders': 'Заказов пока нет.',
     'procurement.noRules': 'Правил пока нет.',
     'auth.organizationName': 'Название организации',
-    'auth.workspaceSlugLabel': 'Slug рабочего пространства',
+    'auth.workspaceSlugLabel': 'Название рабочего пространства',
     'auth.createWorkspace': 'Создать пространство',
     'auth.creating': 'Создание…',
     'auth.haveAccount': 'Уже есть аккаунт?',
