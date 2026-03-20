@@ -1,3 +1,10 @@
-import type { Request, Response } from 'express';
-export declare function list(_req: unknown, res: Response): Promise<Response<any, Record<string, any>>>;
-export declare function setPriority(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+import type { Response } from 'express';
+import type { AuthRequest } from '../auth/middleware.js';
+export declare function list(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function setPriority(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function listNormalizationCandidates(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function mergeProducts(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function normalizeProducts(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function getDuplicates(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function postAutoMerge(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function getProductHistory(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>>>;

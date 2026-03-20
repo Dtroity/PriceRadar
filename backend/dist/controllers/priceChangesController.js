@@ -1,6 +1,8 @@
 import * as priceChangesModel from '../models/priceChanges.js';
+import { config } from '../config.js';
 export async function list(req, res) {
     try {
+        const authReq = req;
         const supplierId = req.query.supplierId;
         const fromDate = req.query.fromDate;
         const toDate = req.query.toDate;
@@ -8,7 +10,8 @@ export async function list(req, res) {
         const maxPercent = req.query.maxPercent != null ? Number(req.query.maxPercent) : undefined;
         const priorityOnly = req.query.priorityOnly === 'true';
         const limit = Math.min(Number(req.query.limit) || 100, 500);
-        const changes = await priceChangesModel.getPriceChanges({ supplierId, fromDate, toDate, minPercent, maxPercent, priorityOnly }, limit);
+        const organizationId = config.multiTenant ? authReq.user?.organizationId : undefined;
+        const changes = await priceChangesModel.getPriceChanges({ organizationId, supplierId, fromDate, toDate, minPercent, maxPercent, priorityOnly }, limit);
         return res.json({ changes });
     }
     catch (err) {

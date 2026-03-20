@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { config } from '../config.js';
+import { fetchWithRetry } from '../services/http.js';
 
 export type AiModelSource = 'openai' | 'ollama';
 
@@ -40,7 +41,7 @@ export async function completeJson<T = unknown>(prompt: string, options?: AiClie
   }
 
   // Ollama-compatible fallback
-  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
+  const res = await fetchWithRetry(`${OLLAMA_URL}/api/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

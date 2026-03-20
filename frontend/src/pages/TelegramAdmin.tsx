@@ -10,7 +10,8 @@ export default function TelegramAdmin() {
   const [status, setStatus] = useState<{ enabled: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  if (user?.role !== 'admin') {
+  const canManageTelegram = user?.role === 'super_admin' || user?.role === 'org_admin';
+  if (!canManageTelegram) {
     return (
       <div className="p-4 text-slate-600">{t('telegram.accessDenied')}</div>
     );
@@ -33,8 +34,9 @@ export default function TelegramAdmin() {
   };
 
   useEffect(() => {
-    if (user?.role === 'admin') load();
-  }, [user?.role]);
+    if (canManageTelegram) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canManageTelegram]);
 
   const toggleAllow = async (tu: TelegramUser) => {
     try {

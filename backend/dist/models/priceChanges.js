@@ -1,7 +1,13 @@
 import { pool } from '../db/pool.js';
-export async function createPriceChange(productId, supplierId, oldPrice, newPrice, isPriority) {
+export async function createPriceChange(productId, supplierId, oldPrice, newPrice, isPriority, organizationId) {
     const changeValue = newPrice - oldPrice;
     const changePercent = oldPrice !== 0 ? (changeValue / oldPrice) * 100 : 0;
+    if (organizationId) {
+        const { rows } = await pool.query(`INSERT INTO price_changes (organization_id, product_id, supplier_id, old_price, new_price, change_value, change_percent, is_priority)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, product_id, supplier_id, old_price, new_price, change_value, change_percent, is_priority, created_at`, [organizationId, productId, supplierId, oldPrice, newPrice, changeValue, changePercent, isPriority]);
+        return rows[0];
+    }
     const { rows } = await pool.query(`INSERT INTO price_changes (product_id, supplier_id, old_price, new_price, change_value, change_percent, is_priority)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING id, product_id, supplier_id, old_price, new_price, change_value, change_percent, is_priority, created_at`, [productId, supplierId, oldPrice, newPrice, changeValue, changePercent, isPriority]);
@@ -11,6 +17,10 @@ export async function getPriceChanges(filters = {}, limit = 100) {
     const conditions = ['1=1'];
     const params = [];
     let idx = 1;
+    if (filters.organizationId) {
+        conditions.push(`pc.organization_id = $${idx++}`);
+        params.push(filters.organizationId);
+    }
     if (filters.supplierId) {
         conditions.push(`pc.supplier_id = $${idx++}`);
         params.push(filters.supplierId);

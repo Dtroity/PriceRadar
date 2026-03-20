@@ -1,7 +1,7 @@
 /**
  * Proviator / Restaurant Procurement AI Platform - Backend types
  */
-export type UserRole = 'owner' | 'admin' | 'manager' | 'viewer';
+export type UserRole = 'super_admin' | 'org_admin' | 'manager';
 
 export interface Organization {
   id: string;
@@ -77,7 +77,15 @@ export interface TelegramUser {
   created_at: Date;
 }
 
-export type DocumentStatus = 'pending' | 'parsed' | 'needs_review' | 'verified' | 'failed';
+export type DocumentStatus =
+  | 'pending'
+  | 'parsed'
+  | 'needs_review'
+  | 'verified'
+  | 'failed'
+  | 'ocr_failed';
+
+export type DocumentParseSource = 'llm' | 'rules';
 
 export interface Document {
   id: string;
@@ -90,6 +98,9 @@ export interface Document {
   source_type: SourceType;
   status: DocumentStatus;
   confidence: number | null;
+  ocr_confidence: number | null;
+  ocr_engine: string | null;
+  parse_source: string | null;
   total_amount: number | null;
   created_at: Date;
   updated_at: Date;

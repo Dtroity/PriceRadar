@@ -1,11 +1,17 @@
 import type { Job } from 'bullmq';
 import { readFile } from 'fs/promises';
 import path from 'path';
-import { config } from '../config.js';
 import * as documentsModel from '../models/documents.js';
 import { pool } from '../db/pool.js';
+import { ocrDocumentBuffer } from '../services/documentOcrPipeline.js';
+import { parseInvoiceFromText } from '../services/invoiceTextParser.js';
+import { OCR_THRESHOLD_AUTO, OCR_THRESHOLD_REVIEW } from '../config/constants.js';
+import type { DocumentStatus } from '../types/index.js';
+import { logger } from '../utils/logger.js';
+import * as Sentry from '@sentry/node';
+import { documentsOcrConfidence, documentsProcessedTotal } from '../monitoring/metrics.js';
 
-const CONFIDENCE_THRESHOLD = 0.7;
+const PARSE_CONFIDENCE_THRESHOLD = 0.7;
 
 export interface DocumentJobPayload {
   documentId: string;
@@ -28,43 +34,101 @@ export async function processDocumentJob(job: Job<DocumentJobPayload>): Promise<
   } catch (err) {
     await recordError(documentId, err instanceof Error ? err.message : 'File read failed');
     await documentsModel.updateParsed(documentId, organizationId, { status: 'failed' });
+    documentsProcessedTotal.inc({ status: 'failed' });
+    if (process.env.SENTRY_DSN) {
+      Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
+        extra: { documentId, organizationId, phase: 'read_file' },
+      });
+    }
     throw err;
   }
 
-  const form = new FormData();
-  form.append('file', new Blob([new Uint8Array(buffer)], { type: mimeType }), path.basename(filePath));
-
-  const baseUrl = config.aiServiceUrl.replace(/\/$/, '');
-  const response = await fetch(`${baseUrl}/parse-invoice`, {
-    method: 'POST',
-    body: form,
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    await recordError(documentId, `AI service error: ${response.status} ${text}`);
-    await documentsModel.updateParsed(documentId, organizationId, { status: 'failed' });
-    throw new Error(`parse-invoice failed: ${response.status}`);
+  let ocr: Awaited<ReturnType<typeof ocrDocumentBuffer>>;
+  try {
+    ocr = await ocrDocumentBuffer(buffer, mimeType, filePath, { documentId, organizationId });
+  } catch (err) {
+    documentsProcessedTotal.inc({ status: 'failed' });
+    await documentsModel.updateParsed(documentId, organizationId, { status: 'failed' }).catch(() => {});
+    if (process.env.SENTRY_DSN) {
+      Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
+        extra: { documentId, organizationId, jobId: job.id, phase: 'ocr' },
+      });
+    }
+    throw err;
   }
 
-  const parsed = (await response.json()) as {
-    supplier?: string | null;
-    documentNumber?: string | null;
-    date?: string | null;
-    items?: Array<{
-      name?: string | null;
-      quantity?: number;
-      unit?: string | null;
-      price?: number | null;
-      sum?: number | null;
-      vat?: number | null;
-    }>;
-    total?: number | null;
-    confidence?: number | null;
-  };
+  logger.info(
+    {
+      documentId,
+      organizationId,
+      ocrConfidence: ocr.confidence,
+      engine: ocr.engine,
+      parseSource: null,
+      msg: `[OCR] confidence=${ocr.confidence.toFixed(2)}, engine=${ocr.engine}`,
+    },
+    `[OCR] confidence=${ocr.confidence.toFixed(2)}, engine=${ocr.engine}`
+  );
 
-  const confidence = typeof parsed.confidence === 'number' ? parsed.confidence : null;
-  const status = confidence !== null && confidence < CONFIDENCE_THRESHOLD ? 'needs_review' : 'parsed';
+  documentsOcrConfidence.observe(ocr.confidence);
+
+  if (ocr.confidence < OCR_THRESHOLD_REVIEW) {
+    await documentsModel.markOcrFailed(documentId, organizationId, ocr.confidence, ocr.engine);
+    await recordError(documentId, `OCR confidence ${ocr.confidence} below ${OCR_THRESHOLD_REVIEW}`);
+    logger.warn(
+      {
+        documentId,
+        organizationId,
+        ocrConfidence: ocr.confidence,
+        engine: ocr.engine,
+        status: 'ocr_failed',
+        msg: 'OCR below threshold; skipping invoice parser',
+      },
+      'OCR failed threshold'
+    );
+    documentsProcessedTotal.inc({ status: 'ocr_failed' });
+    if (process.env.SENTRY_DSN) {
+      Sentry.captureMessage('Document OCR failed', {
+        level: 'warning',
+        extra: { documentId, organizationId, ocrConfidence: ocr.confidence, engine: ocr.engine },
+      });
+    }
+    return;
+  }
+
+  let parsed: Awaited<ReturnType<typeof parseInvoiceFromText>>;
+  try {
+    parsed = await parseInvoiceFromText(ocr.text);
+  } catch (err) {
+    documentsProcessedTotal.inc({ status: 'failed' });
+    await documentsModel.updateParsed(documentId, organizationId, { status: 'failed' }).catch(() => {});
+    if (process.env.SENTRY_DSN) {
+      Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
+        extra: { documentId, organizationId, jobId: job.id, phase: 'parse' },
+      });
+    }
+    throw err;
+  }
+
+  const parseConfidence = typeof parsed.confidence === 'number' ? parsed.confidence : null;
+  let status: DocumentStatus = 'parsed';
+  if (ocr.confidence < OCR_THRESHOLD_AUTO) {
+    status = 'needs_review';
+  } else if (parseConfidence !== null && parseConfidence < PARSE_CONFIDENCE_THRESHOLD) {
+    status = 'needs_review';
+  }
+
+  logger.info(
+    {
+      documentId,
+      organizationId,
+      ocrConfidence: ocr.confidence,
+      engine: ocr.engine,
+      status,
+      parseSource: parsed.source ?? null,
+      msg: `[OCR] confidence=${ocr.confidence.toFixed(2)}, engine=${ocr.engine}, status=${status}`,
+    },
+    `[OCR] confidence=${ocr.confidence.toFixed(2)}, engine=${ocr.engine}, status=${status}`
+  );
 
   const docDate = parsed.date
     ? (() => {
@@ -73,13 +137,16 @@ export async function processDocumentJob(job: Job<DocumentJobPayload>): Promise<
       })()
     : null;
 
-  await documentsModel.updateParsed(documentId, organizationId, {
+  await documentsModel.setInvoiceParseResult(documentId, organizationId, {
     supplier_name: parsed.supplier ?? null,
     document_number: parsed.documentNumber ?? null,
     document_date: docDate,
     total_amount: parsed.total ?? null,
     status,
-    confidence,
+    confidence: parseConfidence,
+    ocr_confidence: ocr.confidence,
+    ocr_engine: ocr.engine,
+    parse_source: parsed.source ?? null,
   });
 
   const items = Array.isArray(parsed.items) ? parsed.items : [];
@@ -100,6 +167,8 @@ export async function processDocumentJob(job: Job<DocumentJobPayload>): Promise<
       }))
     );
   }
+
+  documentsProcessedTotal.inc({ status });
 }
 
 async function recordError(documentId: string, errorMessage: string): Promise<void> {

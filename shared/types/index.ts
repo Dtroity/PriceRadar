@@ -2,7 +2,7 @@
  * PriceRadar - Shared types
  */
 
-export type UserRole = 'admin' | 'manager' | 'viewer';
+export type UserRole = 'super_admin' | 'org_admin' | 'manager';
 
 export interface User {
   id: string;

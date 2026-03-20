@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   email VARCHAR(255) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
-  role VARCHAR(20) NOT NULL DEFAULT 'viewer' CHECK (role IN ('owner', 'admin', 'manager', 'viewer')),
+  role VARCHAR(20) NOT NULL DEFAULT 'manager' CHECK (role IN ('super_admin', 'org_admin', 'manager')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(organization_id, email)
 );
@@ -82,15 +82,19 @@ CREATE INDEX idx_product_mapping_org_supplier ON product_mapping(organization_id
 CREATE TABLE IF NOT EXISTS product_aliases (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-  supplier_name VARCHAR(255) NOT NULL,
-  alias_name VARCHAR(500) NOT NULL,
+  product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+  supplier_name VARCHAR(255),
+  alias_name VARCHAR(500),
+  raw_name VARCHAR(500),
+  normalized_name VARCHAR(500),
   confidence DECIMAL(5, 2) NOT NULL DEFAULT 100.0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE INDEX idx_product_aliases_organization ON product_aliases(organization_id);
 CREATE INDEX idx_product_aliases_product ON product_aliases(product_id);
+CREATE INDEX idx_product_aliases_raw_name ON product_aliases(organization_id, raw_name);
+CREATE INDEX idx_product_aliases_normalized_name ON product_aliases(organization_id, normalized_name);
 
 -- Priority products (explicit table optional; we keep is_priority on products)
 -- CREATE TABLE IF NOT EXISTS priority_products (
@@ -382,3 +386,9 @@ CREATE INDEX idx_audit_logs_timestamp ON audit_logs(timestamp DESC);
 
 -- For existing DBs that had documents before confidence column was added:
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS confidence DECIMAL(5, 2);
+
+-- Product alias normalization fields (non-AI deduplication)
+ALTER TABLE product_aliases ADD COLUMN IF NOT EXISTS raw_name VARCHAR(500);
+ALTER TABLE product_aliases ADD COLUMN IF NOT EXISTS normalized_name VARCHAR(500);
+CREATE INDEX IF NOT EXISTS idx_product_aliases_raw_name ON product_aliases(organization_id, raw_name);
+CREATE INDEX IF NOT EXISTS idx_product_aliases_normalized_name ON product_aliases(organization_id, normalized_name);

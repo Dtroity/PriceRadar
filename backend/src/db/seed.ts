@@ -9,8 +9,8 @@ async function seed() {
     process.exit(0);
     return;
   }
-  await usersModel.createUser(email, password, 'admin');
-  console.log('Created admin user:', email);
+  await usersModel.createUser(email, password, 'super_admin');
+  console.log('Created super_admin user:', email);
   process.exit(0);
 }
 

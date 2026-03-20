@@ -3,7 +3,42 @@ import { Link } from 'react-router-dom';
 import { api, type Document } from '../api/client';
 import { useT } from '../i18n/LocaleContext';
 
-const STATUS_OPTIONS = ['', 'pending', 'parsed', 'needs_review', 'verified', 'failed'];
+const STATUS_OPTIONS = ['', 'pending', 'parsed', 'needs_review', 'verified', 'failed', 'ocr_failed'];
+
+function documentOcrBadges(d: Document, t: (k: string) => string) {
+  const ocr = d.ocr_confidence;
+  const badges: { key: string; className: string; label: string }[] = [];
+  if (d.parse_source === 'rules') {
+    badges.push({
+      key: 'rules',
+      className: 'bg-slate-200 text-slate-700',
+      label: t('documents.badgeRulesParser'),
+    });
+  }
+  const lowOcr = d.status === 'ocr_failed' || (ocr != null && ocr < 0.6);
+  const midOcr = !lowOcr && ocr != null && ocr >= 0.6 && ocr < 0.85;
+  const highOcr = !lowOcr && ocr != null && ocr >= 0.85;
+  if (lowOcr) {
+    badges.push({
+      key: 'ocr-fail',
+      className: 'bg-red-100 text-red-800',
+      label: t('documents.badgeOcrFailed'),
+    });
+  } else if (midOcr) {
+    badges.push({
+      key: 'ocr-review',
+      className: 'bg-amber-100 text-amber-900',
+      label: t('documents.badgeOcrReview'),
+    });
+  } else if (highOcr) {
+    badges.push({
+      key: 'ocr-ok',
+      className: 'bg-emerald-50 text-emerald-800',
+      label: t('documents.badgeOcrOk'),
+    });
+  }
+  return badges;
+}
 
 export default function Documents() {
   const t = useT();
@@ -84,6 +119,7 @@ export default function Documents() {
                 <th className="text-left py-2 px-3">{t('documents.supplier')}</th>
                 <th className="text-left py-2 px-3">{t('documents.date')}</th>
                 <th className="text-left py-2 px-3">{t('documents.status')}</th>
+                <th className="text-left py-2 px-3">{t('documents.ocrQuality')}</th>
                 <th className="text-left py-2 px-3">{t('documents.confidence')}</th>
                 <th className="text-left py-2 px-3">{t('documents.total')}</th>
                 <th className="text-left py-2 px-3"></th>
@@ -100,13 +136,37 @@ export default function Documents() {
                       className={
                         d.status === 'verified'
                           ? 'text-green-600'
-                          : d.status === 'needs_review' || d.status === 'failed'
-                            ? 'text-amber-600'
+                          : d.status === 'needs_review' || d.status === 'failed' || d.status === 'ocr_failed'
+                            ? d.status === 'ocr_failed'
+                              ? 'text-red-700 font-medium'
+                              : 'text-amber-600'
                             : 'text-slate-600'
                       }
                     >
                       {t('documents.' + d.status)}
                     </span>
+                  </td>
+                  <td className="py-2 px-3">
+                    <div className="flex flex-wrap items-center gap-1">
+                      {(() => {
+                        const badges = documentOcrBadges(d, t);
+                        return (
+                          <>
+                            {badges.map((b) => (
+                              <span key={b.key} className={`inline-block rounded px-1.5 py-0.5 text-xs ${b.className}`}>
+                                {b.label}
+                              </span>
+                            ))}
+                            {d.ocr_confidence != null && (
+                              <span className="text-xs text-slate-500">
+                                {Math.round(d.ocr_confidence * 100)}%
+                              </span>
+                            )}
+                            {badges.length === 0 && d.ocr_confidence == null ? '—' : null}
+                          </>
+                        );
+                      })()}
+                    </div>
                   </td>
                   <td className="py-2 px-3">{d.confidence != null ? `${Math.round(d.confidence * 100)}%` : '—'}</td>
                   <td className="py-2 px-3">{d.total_amount != null ? d.total_amount.toFixed(2) : '—'}</td>

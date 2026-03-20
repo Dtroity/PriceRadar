@@ -22,4 +22,9 @@ export const config = {
         maxFileSize: 20 * 1024 * 1024, // 20MB
     },
     frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+    multiTenant: process.env.MULTI_TENANT === 'true',
+    aiServiceUrl: process.env.AI_SERVICE_URL ?? 'http://localhost:8000',
+    /** Service account JSON path for Google Cloud Vision (invoice OCR). See GOOGLE_APPLICATION_CREDENTIALS. */
+    googleApplicationCredentials: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    debug: process.env.DEBUG === 'true',
 };

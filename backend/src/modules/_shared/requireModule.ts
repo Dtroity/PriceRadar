@@ -3,9 +3,12 @@ import type { AuthRequest } from '../../auth/middleware.js';
 import { organizationHasModule } from './subscriptionRepository.js';
 
 export function requireModule(moduleKey: string) {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  const middleware = async (req: Request, res: Response, next: NextFunction) => {
     const auth = req as AuthRequest;
     const orgId = auth.user?.organizationId;
+    if (auth.user?.role === 'super_admin') {
+      return next();
+    }
     if (!orgId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -23,4 +26,6 @@ export function requireModule(moduleKey: string) {
       return res.status(500).json({ error: 'Subscription check failed' });
     }
   };
+  (middleware as unknown as { requiredModule: string }).requiredModule = moduleKey;
+  return middleware;
 }

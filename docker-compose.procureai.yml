@@ -49,8 +49,12 @@ services:
       AI_SERVICE_URL: http://ai-service:8000
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_BOT_ENABLED: ${TELEGRAM_BOT_ENABLED:-false}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-/app/keys/google.json}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
     volumes:
       - uploads_data:/app/uploads
+      - ./keys:/app/keys:ro
     depends_on:
       postgres:
         condition: service_healthy

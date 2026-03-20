@@ -5,7 +5,8 @@ export interface AuthRequest extends Request {
         userId: string;
         email: string;
         role: UserRole;
+        organizationId?: string;
     };
 }
 export declare function authMiddleware(req: AuthRequest, res: Response, next: NextFunction): Response<any, Record<string, any>> | undefined;
-export declare function requireRole(...roles: UserRole[]): (req: AuthRequest, res: Response, next: NextFunction) => Response<any, Record<string, any>> | undefined;
+export declare function requireRole(...rolesOrArray: (UserRole | UserRole[])[]): (req: AuthRequest, res: Response, next: NextFunction) => Response<any, Record<string, any>> | undefined;

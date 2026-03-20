@@ -17,6 +17,14 @@ export async function getAllTelegramUsers(): Promise<TelegramUser[]> {
   return rows;
 }
 
+export async function getTelegramUsersByOrganization(organizationId: string): Promise<TelegramUser[]> {
+  const { rows } = await pool.query(
+    'SELECT id, telegram_id, username, role, is_allowed, created_at FROM telegram_users WHERE organization_id = $1 ORDER BY created_at DESC',
+    [organizationId]
+  );
+  return rows;
+}
+
 export async function createTelegramUser(
   telegramId: string,
   username: string | null,
@@ -38,12 +46,27 @@ export async function setTelegramUserAllowed(telegramId: string, isAllowed: bool
   );
 }
 
+export async function setTelegramUserAllowedForOrganization(
+  organizationId: string,
+  telegramId: string,
+  isAllowed: boolean
+): Promise<void> {
+  await pool.query(
+    'UPDATE telegram_users SET is_allowed = $1 WHERE organization_id = $2 AND telegram_id = $3',
+    [isAllowed, organizationId, telegramId]
+  );
+}
+
 export async function setTelegramUserRole(id: string, role: string): Promise<void> {
   await pool.query('UPDATE telegram_users SET role = $1 WHERE id = $2', [role, id]);
 }
 
 export async function removeTelegramUser(id: string): Promise<void> {
   await pool.query('DELETE FROM telegram_users WHERE id = $1', [id]);
+}
+
+export async function removeTelegramUserForOrganization(organizationId: string, id: string): Promise<void> {
+  await pool.query('DELETE FROM telegram_users WHERE organization_id = $1 AND id = $2', [organizationId, id]);
 }
 
 export async function getAllowedTelegramIds(): Promise<string[]> {

@@ -74,7 +74,7 @@ export const api = {
     register: (email: string, password: string, role?: string) =>
       request<{ user: User; accessToken: string; refreshToken: string }>('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ email, password, role: role || 'viewer' }),
+        body: JSON.stringify({ email, password, role: role || 'manager' }),
       }),
     registerOrg: (organizationName: string, slug: string, email: string, password: string) =>
       request<{ user: User; organization: { id: string; name: string; slug: string }; accessToken: string; refreshToken: string }>('/auth/register-org', {
@@ -95,6 +95,30 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ isPriority }),
     }),
+  productNormalization: {
+    list: () =>
+      request<{ items: ProductNormalizationItem[] }>('/products/normalize'),
+    apply: (rawNames: string[], targetNormalizedName: string) =>
+      request<{ ok: boolean; updated: number }>('/products/normalize', {
+        method: 'POST',
+        body: JSON.stringify({ rawNames, targetNormalizedName }),
+      }),
+  },
+  productsMerge: (sourceProductIds: string[], targetProductId: string) =>
+    request<{ ok: boolean; mergedSourceIds: string[] }>('/products/merge', {
+      method: 'POST',
+      body: JSON.stringify({ sourceProductIds, targetProductId }),
+    }),
+  getDuplicates: (threshold?: number) => {
+    const q = threshold != null ? `?threshold=${encodeURIComponent(String(threshold))}` : '';
+    return request<{
+      pairs: Array<{ product1: Product; product2: Product; similarity: number }>;
+    }>(`/products/duplicates${q}`);
+  },
+  autoMergeProducts: () =>
+    request<{ ok: boolean; merged: number }>('/products/auto-merge', { method: 'POST' }),
+  getProductHistory: (productId: string) =>
+    request<{ history: ProductAuditEntry[] }>(`/products/${productId}/history`),
   priceChanges: (params?: Record<string, string>) => {
     const q = new URLSearchParams(params).toString();
     return request<{ changes: PriceChange[] }>(`/price-changes${q ? `?${q}` : ''}`);
@@ -185,6 +209,14 @@ export interface Product {
   created_at: string;
 }
 
+export interface ProductNormalizationItem {
+  id: string;
+  raw_name: string;
+  normalized_name: string;
+  usage_count: number;
+  created_at: string;
+}
+
 export interface PriceChange {
   id: string;
   product_id: string;
@@ -219,9 +251,22 @@ export interface Document {
   source_type: string;
   status: string;
   confidence: number | null;
+  ocr_confidence: number | null;
+  ocr_engine: string | null;
+  parse_source: string | null;
   total_amount: number | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProductAuditEntry {
+  id: string;
+  organization_id: string;
+  product_id: string;
+  action: string;
+  actor_id: string | null;
+  meta: Record<string, unknown> | null;
+  created_at: string;
 }
 
 export interface DocumentItem {

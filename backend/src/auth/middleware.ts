@@ -20,18 +20,27 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
       role: payload.role,
       organizationId: payload.organizationId,
     };
+    console.log(
+      `[auth] ${req.method} ${req.originalUrl} user=${req.user.userId} role=${req.user.role} org=${req.user.organizationId ?? 'none'}`
+    );
     next();
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
 
-export function requireRole(...roles: UserRole[]) {
-  return (req: AuthRequest, res: Response, next: NextFunction) => {
+export function requireRole(...rolesOrArray: (UserRole | UserRole[])[]) {
+  const roles = rolesOrArray.flatMap((r) => (Array.isArray(r) ? r : [r]));
+  const middleware = (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    console.log(
+      `[rbac] ${req.method} ${req.originalUrl} user=${req.user.userId} role=${req.user.role} required=${roles.join(',')}`
+    );
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({ error: 'Forbidden' });
     }
     next();
   };
+  (middleware as unknown as { requiredRoles: UserRole[] }).requiredRoles = roles;
+  return middleware;
 }

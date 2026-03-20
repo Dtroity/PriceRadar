@@ -20,4 +20,9 @@ export declare const config: {
         readonly maxFileSize: number;
     };
     readonly frontendUrl: string;
+    readonly multiTenant: boolean;
+    readonly aiServiceUrl: string;
+    /** Service account JSON path for Google Cloud Vision (invoice OCR). See GOOGLE_APPLICATION_CREDENTIALS. */
+    readonly googleApplicationCredentials: string | undefined;
+    readonly debug: boolean;
 };

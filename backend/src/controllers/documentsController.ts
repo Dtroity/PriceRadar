@@ -12,7 +12,7 @@ import { recordFeedbackIfCorrected } from '../modules/invoice-ai/learningService
 import { learnFromMapping } from '../modules/invoice-ai/aliasLearningService.js';
 import { recordFromPriceList } from '../services/supplierPricesHistory.js';
 import { stockUpdateQueue } from '../modules/stock/worker.js';
-import type { SourceType } from '../types/index.js';
+import type { DocumentStatus, SourceType } from '../types/index.js';
 
 export async function upload(req: AuthRequest, res: Response) {
   try {
@@ -51,7 +51,7 @@ export async function list(req: AuthRequest, res: Response) {
     const status = req.query.status as string | undefined;
     const list = await documentsModel.list(
       organizationId,
-      status ? { status: status as 'pending' | 'parsed' | 'needs_review' | 'verified' | 'failed' } : {},
+      status ? { status: status as DocumentStatus } : {},
       50
     );
     return res.json(list);
@@ -208,7 +208,10 @@ export async function confirm(req: AuthRequest, res: Response) {
         doc.file_path,
         organizationId
       );
-      await pricesModel.insertPrices(priceList.id, priceItems);
+      await pricesModel.insertPrices(priceList.id, priceItems, {
+        actorUserId: req.user?.userId ?? null,
+        documentId: documentId,
+      });
       await recordFromPriceList(priceList.id).catch(() => {});
       await compareAndSaveChanges(supplierId, priceList.id, uploadDate, organizationId);
     }

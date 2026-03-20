@@ -21,7 +21,7 @@ export async function findUserById(id: string): Promise<User | null> {
 export async function createUser(
   email: string,
   password: string,
-  role: UserRole = 'viewer'
+  role: UserRole = 'manager'
 ): Promise<User> {
   const password_hash = await bcrypt.hash(password, 10);
   const { rows } = await pool.query(

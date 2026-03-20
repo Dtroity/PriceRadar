@@ -25,7 +25,7 @@ export async function createUser(
   organizationId: string,
   email: string,
   password: string,
-  role: UserRole = 'viewer'
+  role: UserRole = 'manager'
 ): Promise<User> {
   const password_hash = await bcrypt.hash(password, 10);
   const { rows } = await pool.query(

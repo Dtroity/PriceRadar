@@ -1,5 +1,6 @@
 import { Queue, Worker } from 'bullmq';
 import { config } from '../config.js';
+import { logger } from '../utils/logger.js';
 import { processUploadJob, type UploadJobPayload } from './uploadProcessor.js';
 import { processDocumentJob, type DocumentJobPayload } from './documentProcessor.js';
 
@@ -22,7 +23,7 @@ export function startWorkers() {
     { connection, concurrency: 2 }
   );
   uploadWorker.on('failed', (job, err) => {
-    console.error('Upload job failed:', job?.id, err);
+    logger.error({ err, jobId: job?.id }, 'Upload job failed');
   });
 
   documentWorker = new Worker<DocumentJobPayload>(
@@ -31,7 +32,7 @@ export function startWorkers() {
     { connection, concurrency: 2 }
   );
   documentWorker.on('failed', (job, err) => {
-    console.error('Document job failed:', job?.id, err);
+    logger.error({ err, jobId: job?.id }, 'Document job failed');
   });
 
   return uploadWorker;

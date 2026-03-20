@@ -1,6 +1,13 @@
 import * as suppliersModel from '../models/suppliers.js';
-export async function list(_req, res) {
+import * as suppliersMt from '../models/suppliers-mt.js';
+import { config } from '../config.js';
+export async function list(req, res) {
     try {
+        const authReq = req;
+        if (config.multiTenant && authReq.user?.organizationId) {
+            const suppliers = await suppliersMt.getAllByOrganization(authReq.user.organizationId);
+            return res.json({ suppliers });
+        }
         const suppliers = await suppliersModel.getAllSuppliers();
         return res.json({ suppliers });
     }

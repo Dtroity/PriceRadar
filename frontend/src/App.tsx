@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import * as Sentry from '@sentry/react';
 import { useAuth } from './auth/AuthContext';
 import { useT } from './i18n/LocaleContext';
 import Layout from './components/Layout';
@@ -21,6 +22,24 @@ import AutomationRules from './pages/procurement/AutomationRules';
 import StockOverview from './pages/stock/StockOverview';
 import StockForecast from './pages/stock/StockForecast';
 import AutopilotRecommendations from './pages/stock/AutopilotRecommendations';
+import Analytics from './pages/Analytics';
+import AnomaliesPage from './pages/analytics/Anomalies';
+
+function ErrorFallback() {
+  const t = useT();
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 p-6">
+      <p className="text-slate-800 font-medium">{t('common.error')}</p>
+      <button
+        type="button"
+        className="rounded-lg bg-slate-800 px-4 py-2 text-white text-sm"
+        onClick={() => window.location.assign('/')}
+      >
+        {t('nav.dashboard')}
+      </button>
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -38,6 +57,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
+    <Sentry.ErrorBoundary fallback={<ErrorFallback />} showDialog={false}>
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -66,11 +86,14 @@ export default function App() {
                 <Route path="/stock" element={<StockOverview />} />
                 <Route path="/stock/forecast" element={<StockForecast />} />
                 <Route path="/stock/autopilot" element={<AutopilotRecommendations />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/analytics/anomalies" element={<AnomaliesPage />} />
               </Routes>
             </Layout>
           </ProtectedRoute>
         }
       />
     </Routes>
+    </Sentry.ErrorBoundary>
   );
 }

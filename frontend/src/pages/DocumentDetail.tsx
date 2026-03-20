@@ -100,10 +100,38 @@ export default function DocumentDetail() {
         <span>Number: {doc.document_number || '—'}</span>
         <span>Date: {doc.document_date || '—'}</span>
         <span>
-          Status: <strong className={doc.status === 'verified' ? 'text-green-600' : 'text-slate-800'}>{doc.status}</strong>
+          {t('documents.status')}:{' '}
+          <strong
+            className={
+              doc.status === 'verified'
+                ? 'text-green-600'
+                : doc.status === 'ocr_failed'
+                  ? 'text-red-700'
+                  : 'text-slate-800'
+            }
+          >
+            {t('documents.' + doc.status)}
+          </strong>
         </span>
         {doc.confidence != null && (
-          <span>Confidence: {Math.round(doc.confidence * 100)}%</span>
+          <span>
+            {t('documents.confidence')}: {Math.round(doc.confidence * 100)}%
+          </span>
+        )}
+        {doc.ocr_confidence != null && (
+          <span>
+            {t('documentDetail.ocrConfidence')}: {Math.round(doc.ocr_confidence * 100)}%
+          </span>
+        )}
+        {doc.ocr_engine && (
+          <span>
+            {t('documentDetail.ocrEngine')}: {doc.ocr_engine}
+          </span>
+        )}
+        {doc.parse_source && (
+          <span>
+            {t('documentDetail.parseSource')}: {doc.parse_source}
+          </span>
         )}
         {doc.total_amount != null && <span>Total: {doc.total_amount.toFixed(2)}</span>}
       </div>

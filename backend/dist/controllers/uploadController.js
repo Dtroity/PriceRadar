@@ -10,12 +10,15 @@ export async function upload(req, res) {
         if (!['web', 'telegram', 'camera'].includes(sourceType)) {
             return res.status(400).json({ error: 'Invalid sourceType' });
         }
+        const authReq = req;
+        const organizationId = authReq.user?.organizationId;
         const job = await uploadQueue.add('process', {
             filePath: file.path,
             supplierName,
             sourceType: sourceType,
             mimeType: file.mimetype,
             originalName: file.originalname,
+            ...(organizationId && { organizationId }),
         }, { attempts: 2, backoff: { type: 'exponential', delay: 2000 } });
         return res.status(202).json({
             message: 'Upload queued',

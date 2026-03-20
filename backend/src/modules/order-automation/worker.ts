@@ -2,6 +2,7 @@ import { Queue, Worker } from 'bullmq';
 import { config } from '../../config.js';
 import * as repo from './repository.js';
 import type { SendOrderJobPayload } from './types.js';
+import { fetchWithRetry } from '../../services/http.js';
 
 const connection = {
   host: config.redis.host,
@@ -64,7 +65,7 @@ async function sendWhatsAppPlaceholder(phone: string, body: string): Promise<voi
 }
 
 async function postApiPlaceholder(url: string, payload: unknown): Promise<void> {
-  await fetch(url, {
+  await fetchWithRetry(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

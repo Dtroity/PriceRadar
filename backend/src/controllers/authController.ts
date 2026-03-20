@@ -16,7 +16,7 @@ function getUsersModel(payload?: { organizationId?: string }) {
 
 export async function register(req: Request, res: Response) {
   try {
-    const { email, password, role = 'viewer' } = req.body as {
+    const { email, password, role = 'manager' } = req.body as {
       email?: string;
       password?: string;
       role?: UserRole;
@@ -140,7 +140,7 @@ export async function registerOrg(req: Request, res: Response) {
       return res.status(409).json({ error: 'Organization slug already taken' });
     }
     const org = await orgModel.create(organizationName, slug);
-    const user = await usersMt.createUser(org.id, email, password, 'owner');
+    const user = await usersMt.createUser(org.id, email, password, 'org_admin');
     const accessToken = signAccessToken(user.id, user.email, user.role, org.id);
     const refreshToken = signRefreshToken(user.id, user.email, user.role, org.id);
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');

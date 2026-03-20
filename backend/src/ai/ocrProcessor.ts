@@ -18,3 +18,17 @@ export async function runOcr(inputPath: string): Promise<string> {
   return data.text ?? '';
 }
 
+/** Tesseract on an in-memory image (fallback when Vision fails or is unavailable). */
+export async function runOcrFromBuffer(imageBuffer: Buffer): Promise<{ text: string; confidence: number }> {
+  const processed = await sharp(imageBuffer)
+    .greyscale()
+    .normalize()
+    .sharpen()
+    .resize({ width: 2000, withoutEnlargement: true })
+    .toBuffer();
+  const { data } = await Tesseract.recognize(processed, OCR_LANG);
+  const raw = typeof data.confidence === 'number' ? data.confidence : 0;
+  const confidence = Math.min(1, Math.max(0, raw / 100));
+  return { text: data.text ?? '', confidence };
+}
+

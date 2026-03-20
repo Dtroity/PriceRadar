@@ -6,5 +6,6 @@ export interface UploadJobPayload {
     sourceType: SourceType;
     mimeType: string;
     originalName: string;
+    organizationId?: string;
 }
 export declare function processUploadJob(job: Job<UploadJobPayload>): Promise<void>;
