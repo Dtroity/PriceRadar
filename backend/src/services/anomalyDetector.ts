@@ -1,11 +1,14 @@
-import {
-  ANOMALY_THRESHOLD_HIGH,
-  ANOMALY_THRESHOLD_LOW,
-  ANOMALY_THRESHOLD_MEDIUM,
-} from '../config/constants.js';
 import * as anomaliesModel from '../models/anomaliesModel.js';
 import { logger } from '../utils/logger.js';
 import { anomaliesDetectedTotal } from '../monitoring/metrics.js';
+import { pool } from '../db/pool.js';
+import { classifyAnomaly } from './anomalyClassifier.js';
+import { notify } from './telegramNotifier.js';
+import * as orgSettings from '../models/organizationsSettingsModel.js';
+import { enqueueRecommendationsForOrg } from '../workers/recommendationsWorker.js';
+
+/** Re-export pure classifier (no DB) for unit tests. */
+export { classifyAnomaly };
 
 export interface AnomalyCheckInput {
   organizationId: string;
@@ -18,11 +21,20 @@ export interface AnomalyCheckInput {
   oldPrice?: number | null;
 }
 
-function severityForChangePct(absPct: number): 'low' | 'medium' | 'high' | null {
-  if (absPct >= ANOMALY_THRESHOLD_HIGH * 100) return 'high';
-  if (absPct >= ANOMALY_THRESHOLD_MEDIUM * 100) return 'medium';
-  if (absPct >= ANOMALY_THRESHOLD_LOW * 100) return 'low';
-  return null;
+async function namesForNotify(
+  productId: string,
+  supplierId: string
+): Promise<{ product_name: string; supplier_name: string }> {
+  const { rows: p } = await pool.query<{ name: string }>('SELECT name FROM products WHERE id = $1::uuid', [
+    productId,
+  ]);
+  const { rows: s } = await pool.query<{ name: string }>('SELECT name FROM suppliers WHERE id = $1::uuid', [
+    supplierId,
+  ]);
+  return {
+    product_name: p[0]?.name ?? productId,
+    supplier_name: s[0]?.name ?? supplierId,
+  };
 }
 
 /**
@@ -33,11 +45,9 @@ export async function checkAndRecordAnomalies(items: AnomalyCheckInput[]): Promi
   let n = 0;
   for (const it of items) {
     if (it.oldPrice == null || it.oldPrice === 0) continue;
-    const change_pct = ((it.newPrice - it.oldPrice) / it.oldPrice) * 100;
-    const abs = Math.abs(change_pct);
-    const severity = severityForChangePct(abs);
-    if (!severity) continue;
-    const direction = it.newPrice >= it.oldPrice ? 'up' : 'down';
+    const classified = classifyAnomaly(it.oldPrice, it.newPrice);
+    if (!classified) continue;
+    const { severity, direction, changePct } = classified;
     try {
       await anomaliesModel.insertAnomaly({
         organizationId: it.organizationId,
@@ -45,13 +55,47 @@ export async function checkAndRecordAnomalies(items: AnomalyCheckInput[]): Promi
         supplierId: it.supplierId,
         priceBefore: it.oldPrice,
         priceAfter: it.newPrice,
-        changePct: Math.round(change_pct * 100) / 100,
+        changePct,
         direction,
         severity,
         documentId: it.documentId,
       });
       anomaliesDetectedTotal.inc({ severity });
       n++;
+
+      const { telegram_notify } = await orgSettings.getTelegramSettings(it.organizationId);
+      const names = await namesForNotify(it.productId, it.supplierId);
+      if (severity === 'high' && telegram_notify.anomaly_high) {
+        notify(it.organizationId, {
+          type: 'anomaly',
+          anomaly: {
+            product_name: names.product_name,
+            supplier_name: names.supplier_name,
+            price_before: it.oldPrice,
+            price_after: it.newPrice,
+            change_pct: changePct,
+            severity: 'high',
+          },
+        }).catch(() => {});
+      } else if (severity === 'medium' && telegram_notify.anomaly_medium) {
+        notify(it.organizationId, {
+          type: 'anomaly',
+          anomaly: {
+            product_name: names.product_name,
+            supplier_name: names.supplier_name,
+            price_before: it.oldPrice,
+            price_after: it.newPrice,
+            change_pct: changePct,
+            severity: 'medium',
+          },
+        }).catch(() => {});
+      }
+
+      if (direction === 'down') {
+        enqueueRecommendationsForOrg(it.organizationId).catch((e) =>
+          logger.warn({ e }, 'enqueue recommendations after price drop failed')
+        );
+      }
     } catch (err) {
       logger.warn({ err, productId: it.productId }, 'anomaly insert failed');
     }

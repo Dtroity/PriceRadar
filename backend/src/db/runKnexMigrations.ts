@@ -16,8 +16,14 @@ export async function runKnexMigrations(): Promise<number> {
   const knexfile = require(knexfilePath) as {
     development: Knex.Config;
     production: Knex.Config;
+    test: Knex.Config;
   };
-  const env = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+  const env =
+    process.env.NODE_ENV === 'production'
+      ? 'production'
+      : process.env.NODE_ENV === 'test'
+        ? 'test'
+        : 'development';
   const cfg = knexfile[env];
   const db = knexFactory(cfg);
   try {

@@ -210,30 +210,29 @@ export async function getPriceSummary(params: {
     first_price: string;
     last_price: string;
   }>(
-    `WITH bounds AS (
-       SELECT product_id, MIN(date) AS dmin, MAX(date) AS dmax
-       FROM supplier_prices_history
-       WHERE organization_id = $1::uuid
-         AND date >= CURRENT_DATE - $2::int * INTERVAL '1 day'
-       GROUP BY product_id
+    `WITH ordered AS (
+       SELECT
+         p.product_id,
+         p.price,
+         COALESCE(p.created_at, pl.created_at) AS ts
+       FROM prices p
+       JOIN price_lists pl ON p.price_list_id = pl.id
+       WHERE pl.organization_id = $1::uuid
+         AND COALESCE(p.created_at, pl.created_at) >= NOW() - $2::int * INTERVAL '1 day'
      ),
      first_p AS (
-       SELECT DISTINCT ON (h.product_id) h.product_id, h.price AS first_price
-       FROM supplier_prices_history h
-       INNER JOIN bounds b ON b.product_id = h.product_id AND h.date = b.dmin
-       WHERE h.organization_id = $1::uuid
-       ORDER BY h.product_id, h.created_at ASC
+       SELECT DISTINCT ON (product_id) product_id, price AS first_price
+       FROM ordered
+       ORDER BY product_id, ts ASC
      ),
      last_p AS (
-       SELECT DISTINCT ON (h.product_id) h.product_id, h.price AS last_price
-       FROM supplier_prices_history h
-       INNER JOIN bounds b ON b.product_id = h.product_id AND h.date = b.dmax
-       WHERE h.organization_id = $1::uuid
-       ORDER BY h.product_id, h.created_at DESC
+       SELECT DISTINCT ON (product_id) product_id, price AS last_price
+       FROM ordered
+       ORDER BY product_id, ts DESC
      )
      SELECT pr.id AS product_id, pr.name, f.first_price::text, l.last_price::text
      FROM first_p f
-     INNER JOIN last_p l ON l.product_id = f.product_id
+     INNER JOIN last_p l ON l.product_id = f.product_id AND f.first_price IS DISTINCT FROM l.last_price
      INNER JOIN products pr ON pr.id = f.product_id AND pr.organization_id = $1::uuid
      WHERE f.first_price > 0`,
     [organizationId, periodDays]
@@ -258,10 +257,11 @@ export async function getPriceSummary(params: {
   const anomalies_count = await anomaliesModel.countAnomaliesInPeriod(organizationId, periodDays);
 
   const { rows: tc } = await pool.query<{ c: string }>(
-    `SELECT COUNT(DISTINCT product_id)::text AS c
-     FROM supplier_prices_history
-     WHERE organization_id = $1::uuid
-       AND date >= CURRENT_DATE - $2::int * INTERVAL '1 day'`,
+    `SELECT COUNT(DISTINCT p.product_id)::text AS c
+     FROM prices p
+     JOIN price_lists pl ON p.price_list_id = pl.id
+     WHERE pl.organization_id = $1::uuid
+       AND COALESCE(p.created_at, pl.created_at) >= NOW() - $2::int * INTERVAL '1 day'`,
     [organizationId, periodDays]
   );
   const total_products_tracked = parseInt(tc[0]?.c ?? '0', 10);
@@ -272,4 +272,19 @@ export async function getPriceSummary(params: {
     anomalies_count,
     total_products_tracked,
   };
+}
+
+/**
+ * Price stability from a series of prices: GREATEST(0, 1 - STDDEV_POP/AVG) (same idea as best-suppliers SQL).
+ * Pure math — no DB.
+ */
+export function calcPriceStability(prices: number[]): number {
+  if (prices.length === 0) return 1;
+  const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+  if (avg === 0) return 1;
+  const n = prices.length;
+  const variance = prices.reduce((s, p) => s + (p - avg) ** 2, 0) / n;
+  const std = Math.sqrt(variance);
+  const raw = 1 - std / avg;
+  return Math.max(0, Math.min(1, raw));
 }

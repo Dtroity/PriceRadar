@@ -1,0 +1,256 @@
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { api } from '../../api/client';
+import type { Supplier } from '../../api/client';
+import {
+  acceptRecommendation,
+  createOrder,
+  dismissRecommendation,
+  generateRecommendations,
+  listOrders,
+  listRecommendations,
+  type ProcurementOrder,
+  type ProcurementRecommendation,
+} from '../../api/procurementClient';
+import RecommendationCard from '../../components/procurement/RecommendationCard';
+import OrderStatusBadge from '../../components/procurement/OrderStatusBadge';
+import { useT } from '../../i18n/LocaleContext';
+
+const STATUS_OPTS = ['', 'draft', 'pending', 'approved', 'ordered', 'received', 'cancelled'] as const;
+
+function statusLabel(t: (k: string) => string, s: string): string {
+  if (!s) return t('procurement.allStatuses');
+  return t(`procurement.status.${s}`);
+}
+
+export default function Procurement() {
+  const t = useT();
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState<ProcurementOrder[]>([]);
+  const [recs, setRecs] = useState<ProcurementRecommendation[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [status, setStatus] = useState('');
+  const [supplierId, setSupplierId] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [recBusy, setRecBusy] = useState<string | null>(null);
+  const [genLoading, setGenLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setErr(null);
+    setLoading(true);
+    try {
+      const [o, r, s] = await Promise.all([
+        listOrders({
+          status: status || undefined,
+          supplier_id: supplierId || undefined,
+        }),
+        listRecommendations(),
+        api.suppliers(),
+      ]);
+      setOrders(o);
+      setRecs(r);
+      setSuppliers(s.suppliers);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : t('common.failed'));
+    } finally {
+      setLoading(false);
+    }
+  }, [status, supplierId, t]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const newOrder = async () => {
+    setErr(null);
+    try {
+      const o = await createOrder({ title: t('procurement.defaultOrderTitle') });
+      navigate(`/procurement/orders/${o.id}`);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : t('common.failed'));
+    }
+  };
+
+  const runGenerate = async () => {
+    setGenLoading(true);
+    setErr(null);
+    try {
+      await generateRecommendations();
+      const r = await listRecommendations();
+      setRecs(r);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : t('common.failed'));
+    } finally {
+      setGenLoading(false);
+    }
+  };
+
+  const onAccept = async (id: string) => {
+    setRecBusy(id);
+    try {
+      const res = await acceptRecommendation(id);
+      setRecs((prev) => prev.filter((x) => x.id !== id));
+      navigate(`/procurement/orders/${res.order_id}`);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : t('common.failed'));
+    } finally {
+      setRecBusy(null);
+    }
+  };
+
+  const onDismiss = async (id: string) => {
+    setRecBusy(id);
+    try {
+      await dismissRecommendation(id);
+      setRecs((prev) => prev.filter((x) => x.id !== id));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : t('common.failed'));
+    } finally {
+      setRecBusy(null);
+    }
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-800">{t('procurement.hubTitle')}</h1>
+          <p className="text-sm text-slate-600">{t('procurement.hubSubtitle')}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            to="/procurement/recommendations"
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
+          >
+            {t('procurement.aiRecommendationsLink')}
+          </Link>
+          <button
+            type="button"
+            onClick={() => void newOrder()}
+            className="rounded-lg bg-slate-800 px-4 py-2 text-sm text-white"
+          >
+            {t('procurement.newOrder')}
+          </button>
+        </div>
+      </div>
+
+      {err && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{err}</div>}
+
+      {recs.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-medium text-slate-800">{t('procurement.recommendationsBlock')}</h2>
+            <button
+              type="button"
+              disabled={genLoading}
+              onClick={() => void runGenerate()}
+              className="text-sm text-slate-600 underline disabled:opacity-50"
+            >
+              {genLoading ? t('common.loading') : t('procurement.generateRecs')}
+            </button>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {recs.map((r) => (
+              <RecommendationCard
+                key={r.id}
+                rec={r}
+                busy={recBusy === r.id}
+                onAccept={() => void onAccept(r.id)}
+                onDismiss={() => void onDismiss(r.id)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {recs.length === 0 && !loading && (
+        <div className="flex items-center justify-between rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-4 py-3">
+          <p className="text-sm text-slate-600">{t('procurement.noActiveRecs')}</p>
+          <button
+            type="button"
+            disabled={genLoading}
+            onClick={() => void runGenerate()}
+            className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-slate-800 shadow-sm ring-1 ring-slate-200 disabled:opacity-50"
+          >
+            {genLoading ? t('common.loading') : t('procurement.generateRecs')}
+          </button>
+        </div>
+      )}
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium text-slate-800">{t('procurement.ordersList')}</h2>
+        <div className="flex flex-wrap gap-3">
+          <select
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            {STATUS_OPTS.map((s) => (
+              <option key={s || 'all'} value={s}>
+                {statusLabel(t, s)}
+              </option>
+            ))}
+          </select>
+          <select
+            className="min-w-[180px] rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            value={supplierId}
+            onChange={(e) => setSupplierId(e.target.value)}
+          >
+            <option value="">{t('dashboard.allSuppliers')}</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          {loading ? (
+            <p className="p-6 text-slate-500">{t('common.loading')}</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-slate-50">
+                  <th className="px-3 py-2 text-left">{t('procurement.orderTitleCol')}</th>
+                  <th className="px-3 py-2 text-left">{t('documents.status')}</th>
+                  <th className="px-3 py-2 text-left">{t('procurement.created')}</th>
+                  <th className="px-3 py-2 text-left" />
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((o) => (
+                  <tr key={o.id} className="border-b border-slate-100">
+                    <td className="px-3 py-2">
+                      <Link className="font-medium text-slate-900 hover:underline" to={`/procurement/orders/${o.id}`}>
+                        {o.title || o.id.slice(0, 8)}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2">
+                      <OrderStatusBadge status={o.status} label={t(`procurement.status.${o.status}`)} />
+                    </td>
+                    <td className="px-3 py-2 text-slate-600">
+                      {new Date(o.created_at).toLocaleString()}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Link
+                        to={`/procurement/orders/${o.id}`}
+                        className="text-slate-600 hover:text-slate-900"
+                      >
+                        →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {!loading && orders.length === 0 && (
+            <div className="p-8 text-center text-slate-500">{t('procurement.noProcurementOrders')}</div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}

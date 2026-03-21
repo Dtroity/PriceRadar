@@ -29,7 +29,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <Link to="/forecast" className="text-slate-600 hover:text-slate-900">{t('nav.forecast')}</Link>
           <Link to="/foodcost" className="text-slate-600 hover:text-slate-900">{t('nav.foodcost')}</Link>
           <Link to="/suppliers" className="text-slate-600 hover:text-slate-900">{t('nav.suppliers')}</Link>
-          <Link to="/procurement/orders" className="text-slate-600 hover:text-slate-900">{t('nav.orders')}</Link>
+          <Link to="/procurement" className="text-slate-600 hover:text-slate-900">{t('nav.procurement')}</Link>
           <Link to="/integrations" className="text-slate-600 hover:text-slate-900">{t('nav.integrations')}</Link>
           {(user?.role === 'super_admin' || user?.role === 'org_admin') && (
             <Link to="/telegram" className="text-slate-600 hover:text-slate-900">{t('nav.telegram')}</Link>

@@ -1,6 +1,8 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../auth/middleware.js';
 import * as telegramUsersModel from '../models/telegramUsers.js';
+import * as orgSettings from '../models/organizationsSettingsModel.js';
+import { sendTestMessage } from '../services/telegramNotifier.js';
 import { config } from '../config.js';
 
 export async function getBotStatus(_req: AuthRequest, res: Response) {
@@ -41,6 +43,47 @@ export async function allowUser(req: AuthRequest, res: Response) {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to update user' });
+  }
+}
+
+export async function getOrgNotifySettings(req: AuthRequest, res: Response) {
+  try {
+    const organizationId = req.user?.organizationId;
+    if (!organizationId) return res.status(400).json({ error: 'Organization required' });
+    const s = await orgSettings.getTelegramSettings(organizationId);
+    return res.json(s);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed' });
+  }
+}
+
+export async function patchOrgNotifySettings(req: AuthRequest, res: Response) {
+  try {
+    const organizationId = req.user?.organizationId;
+    if (!organizationId) return res.status(400).json({ error: 'Organization required' });
+    const body = req.body as {
+      telegram_chat_id?: string | null;
+      telegram_notify?: orgSettings.TelegramNotifySettings;
+    };
+    await orgSettings.saveTelegramOrgSettings(organizationId, body);
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed' });
+  }
+}
+
+export async function postTestMessage(req: AuthRequest, res: Response) {
+  try {
+    const organizationId = req.user?.organizationId;
+    if (!organizationId) return res.status(400).json({ error: 'Organization required' });
+    if (!config.telegram.botToken) return res.status(503).json({ error: 'Bot not configured' });
+    await sendTestMessage(organizationId);
+    return res.json({ ok: true });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed';
+    return res.status(400).json({ error: msg });
   }
 }
 

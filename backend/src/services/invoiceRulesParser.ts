@@ -1,5 +1,6 @@
 /**
  * Heuristic RU invoice / УПД line parser when LLM is unavailable or low confidence.
+ * Uses [\w\u0400-\u04FF] for Cyrillic (JS \w is ASCII letters + underscore only).
  */
 
 export interface ParsedInvoice {
@@ -18,10 +19,15 @@ export interface ParsedInvoice {
 }
 
 const DATE_RE = /\b(\d{2}[.\-/]\d{2}[.\-/]\d{2,4})\b/;
-const DOC_NUM_RE = /(?:№|N|No\.?|накладн\w*)[\s#]*([\w\-/]+)/i;
+/** Номер после № / N / No — кириллица и латиница (без префикса «накладная», он ломал захват) */
+const DOC_NUM_RE = /(?:№|N|No\.?)\s*#?\s*((?:[\w\u0400-\u04FF]|[\-\/])+)/i;
 const TOTAL_RE = /(?:итого|всего|total)[:\s]+(\d+[,.]?\d*)/gi;
+/**
+ * Строка товара: наименование, кол-во, ед., цена.
+ * Единицы: шт, кг, л, … + слова из букв (в т.ч. кириллица).
+ */
 const LINE_RE =
-  /^(.+?)\s+(\d+[,.]?\d*)\s+(\w+(?:\/\w+)?|шт|кг|л|мл|упак)\s+(\d+[,.]?\d*)\s*$/i;
+  /^(.+?)\s+(\d+[,.]?\d*)\s+([\w\u0400-\u04FF]+(?:\/[\w\u0400-\u04FF]+)?|шт|кг|л|мл|м|г|т|уп(?:ак)?|пач(?:ка)?|бут|рул|уп|п\/к|п\/уп)\s+(\d+[,.]?\d*)\s*$/i;
 
 function parseNum(s: string): number {
   const n = parseFloat(s.replace(',', '.'));
@@ -40,9 +46,12 @@ function normalizeDate(raw: string): string | undefined {
 }
 
 function guessSupplier(lines: string[]): string | undefined {
-  for (let i = 0; i < Math.min(8, lines.length); i++) {
+  for (let i = 0; i < Math.min(12, lines.length); i++) {
     const l = lines[i].trim();
-    if (/^(ИП|ООО|АО|ПАО|ЗАО)\b/i.test(l)) return l.slice(0, 255);
+    const labeled = l.match(/^Поставщик\s*:\s*(.+)$/i);
+    if (labeled) return labeled[1].trim().slice(0, 255);
+    // \b в JS не считает кириллицу «словом» — используем пробел/конец строки
+    if (/^(ИП|ООО|АО|ПАО|ЗАО)(?:\s|$)/i.test(l)) return l.slice(0, 255);
   }
   return undefined;
 }

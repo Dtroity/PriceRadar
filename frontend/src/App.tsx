@@ -17,6 +17,8 @@ import Settings from './pages/Settings';
 import TelegramAdmin from './pages/TelegramAdmin';
 import ProcurementRecommendations from './pages/procurement/Recommendations';
 import ProcurementOrders from './pages/procurement/Orders';
+import Procurement from './pages/procurement/Procurement';
+import OrderDetail from './pages/procurement/OrderDetail';
 import ProcurementSuppliers from './pages/procurement/Suppliers';
 import AutomationRules from './pages/procurement/AutomationRules';
 import StockOverview from './pages/stock/StockOverview';
@@ -78,9 +80,10 @@ export default function App() {
                 <Route path="/integrations" element={<Integrations />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/telegram" element={<TelegramAdmin />} />
-                <Route path="/procurement" element={<ProcurementRecommendations />} />
+                <Route path="/procurement" element={<Procurement />} />
                 <Route path="/procurement/recommendations" element={<ProcurementRecommendations />} />
                 <Route path="/procurement/orders" element={<ProcurementOrders />} />
+                <Route path="/procurement/orders/:id" element={<OrderDetail />} />
                 <Route path="/procurement/suppliers" element={<ProcurementSuppliers />} />
                 <Route path="/procurement/rules" element={<AutomationRules />} />
                 <Route path="/stock" element={<StockOverview />} />

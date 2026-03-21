@@ -32,7 +32,7 @@ export function mountModuleRoutes(api: Router) {
   api.use('/modules/foodcost', foodcostRoutes);
   api.use('/modules/supplier-intelligence', supplierIntelligenceRoutes);
   api.use('/order-automation', orderAutomationRoutes);
-  api.use('/procurement', aiProcurementAgentRoutes);
+  api.use('/ai-procurement-agent', aiProcurementAgentRoutes);
   api.use('/modules/integrations', integrationsRoutes);
   api.use('/stock', stockRoutes);
   api.use('/procurement-autopilot', procurementAutopilotRoutes);

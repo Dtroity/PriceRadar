@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api, type TelegramUser } from '../api/client';
+import { api, type TelegramNotifySettings, type TelegramUser } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useT } from '../i18n/LocaleContext';
 
@@ -9,6 +9,10 @@ export default function TelegramAdmin() {
   const [users, setUsers] = useState<TelegramUser[]>([]);
   const [status, setStatus] = useState<{ enabled: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [chatId, setChatId] = useState('');
+  const [notify, setNotify] = useState<TelegramNotifySettings>({});
+  const [notifyMsg, setNotifyMsg] = useState<string | null>(null);
+  const [notifySaving, setNotifySaving] = useState(false);
 
   const canManageTelegram = user?.role === 'super_admin' || user?.role === 'org_admin';
   if (!canManageTelegram) {
@@ -20,12 +24,17 @@ export default function TelegramAdmin() {
   const load = async () => {
     setLoading(true);
     try {
-      const [usersRes, statusRes] = await Promise.all([
+      const [usersRes, statusRes, orgRes] = await Promise.all([
         api.telegram.users(),
         api.telegram.status(),
+        api.telegram.orgSettings().catch(() => null),
       ]);
       setUsers(usersRes.users);
       setStatus(statusRes);
+      if (orgRes) {
+        setChatId(orgRes.telegram_chat_id ?? '');
+        setNotify(orgRes.telegram_notify ?? {});
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -61,6 +70,36 @@ export default function TelegramAdmin() {
     }
   };
 
+  const toggleNotifyFlag = (key: keyof TelegramNotifySettings) => {
+    setNotify((n) => ({ ...n, [key]: !n[key] }));
+  };
+
+  const saveNotify = async () => {
+    setNotifySaving(true);
+    setNotifyMsg(null);
+    try {
+      await api.telegram.patchOrgSettings({
+        telegram_chat_id: chatId.trim() === '' ? null : chatId.trim(),
+        telegram_notify: notify,
+      });
+      setNotifyMsg('OK');
+    } catch (e) {
+      setNotifyMsg(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setNotifySaving(false);
+    }
+  };
+
+  const sendTest = async () => {
+    setNotifyMsg(null);
+    try {
+      await api.telegram.testMessage();
+      setNotifyMsg('OK');
+    } catch (e) {
+      setNotifyMsg(e instanceof Error ? e.message : 'Failed');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-slate-800">{t('telegram.title')}</h1>
@@ -72,6 +111,57 @@ export default function TelegramAdmin() {
       <p className="text-sm text-slate-500">
         {t('telegram.usersDescription')}
       </p>
+      <section className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
+        <h2 className="text-lg font-medium text-slate-800">{t('telegram.notifyTitle')}</h2>
+        <p className="text-sm text-slate-500">{t('telegram.chatIdHint')}</p>
+        <label className="block text-sm">
+          <span className="text-slate-600">{t('telegram.chatId')}</span>
+          <input
+            className="mt-1 w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm"
+            value={chatId}
+            onChange={(e) => setChatId(e.target.value)}
+            placeholder="-100…"
+          />
+        </label>
+        <div className="flex flex-col gap-2 text-sm">
+          {(
+            [
+              ['anomaly_high', 'telegram.notify.anomaly_high'],
+              ['anomaly_medium', 'telegram.notify.anomaly_medium'],
+              ['recommendation', 'telegram.notify.recommendation'],
+              ['order_status', 'telegram.notify.order_status'],
+            ] as const
+          ).map(([key, labelKey]) => (
+            <label key={key} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={Boolean(notify[key])}
+                onChange={() => toggleNotifyFlag(key)}
+              />
+              <span>{t(labelKey)}</span>
+            </label>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={notifySaving}
+            onClick={() => void saveNotify()}
+            className="rounded-lg bg-slate-800 px-4 py-2 text-sm text-white disabled:opacity-50"
+          >
+            {t('telegram.saveNotify')}
+          </button>
+          <button
+            type="button"
+            onClick={() => void sendTest()}
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-800"
+          >
+            {t('telegram.sendTest')}
+          </button>
+        </div>
+        {notifyMsg && <p className="text-sm text-slate-600">{notifyMsg}</p>}
+      </section>
+
       {loading ? (
         <p className="text-slate-500">{t('common.loading')}</p>
       ) : (

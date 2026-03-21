@@ -27,7 +27,7 @@ src/modules/
 | Module | Base path |
 |--------|-----------|
 | Order automation | `/api/order-automation/orders`, `/filters`, `/automation-rules` |
-| AI procurement | `POST /api/procurement/recommendations` |
+| AI procurement | `POST /api/ai-procurement-agent/recommendations` |
 | Status stubs | `/api/modules/price-monitoring/status`, … |
 
 ## AZbot

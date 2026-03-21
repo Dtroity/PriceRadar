@@ -11,7 +11,10 @@ export default function ProcurementRecommendations() {
   const load = () => {
     setLoading(true);
     setErr(null);
-    request<unknown>('/procurement/recommendations', { method: 'POST', body: JSON.stringify({}) })
+    request<unknown>('/ai-procurement-agent/recommendations', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })
       .then(setData)
       .catch((e) => setErr(e instanceof Error ? e.message : t('common.failed')))
       .finally(() => setLoading(false));

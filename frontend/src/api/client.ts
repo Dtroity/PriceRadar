@@ -154,6 +154,35 @@ export const api = {
       }),
     remove: (id: string) =>
       request<{ ok: boolean }>(`/telegram/users/${id}`, { method: 'DELETE' }),
+    orgSettings: () =>
+      request<{
+        telegram_chat_id: string | null;
+        telegram_notify: TelegramNotifySettings;
+      }>('/telegram/org-settings'),
+    patchOrgSettings: (body: {
+      telegram_chat_id?: string | null;
+      telegram_notify?: TelegramNotifySettings;
+    }) =>
+      request<{ ok: boolean }>('/telegram/org-settings', {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    testMessage: () =>
+      request<{ ok: boolean }>('/telegram/test', { method: 'POST', body: JSON.stringify({}) }),
+  },
+  iiko: {
+    status: () =>
+      request<{ last_sync: IikoSyncLog | null }>('/integrations/iiko/status'),
+    sync: () =>
+      request<{ created: number; updated: number; errors: unknown }>('/integrations/iiko/sync', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      }),
+    patchSettings: (body: { iiko_api_url?: string | null; iiko_api_key?: string | null }) =>
+      request<{ ok: boolean }>('/integrations/iiko/settings', {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
   },
   documents: {
     list: (status?: string) =>
@@ -238,6 +267,20 @@ export interface TelegramUser {
   role: string;
   is_allowed: boolean;
   created_at: string;
+}
+
+export interface TelegramNotifySettings {
+  anomaly_high?: boolean;
+  anomaly_medium?: boolean;
+  recommendation?: boolean;
+  order_status?: boolean;
+}
+
+export interface IikoSyncLog {
+  synced_at: string | null;
+  items_created: number;
+  items_updated: number;
+  errors: unknown;
 }
 
 export interface Document {

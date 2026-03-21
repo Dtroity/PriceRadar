@@ -36,6 +36,9 @@ export function nameSimilarity(a: string, b: string): number {
   return 1 - d / maxLen;
 }
 
+/** @alias nameSimilarity — used in tests / external API. */
+export const similarity = nameSimilarity;
+
 export async function findDuplicatePairs(
   organizationId: string,
   threshold: number

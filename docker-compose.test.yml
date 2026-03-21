@@ -1,0 +1,48 @@
+# Full test run: docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+# Unit-only (no DB): run `npm run test:unit` in backend/ locally.
+
+services:
+  test-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: priceradar_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  test-redis:
+    image: redis:7-alpine
+
+  backend-test:
+    image: node:20-alpine
+    working_dir: /workspace/backend
+    command: sh -c "npm ci && npm run test:all"
+    environment:
+      DATABASE_URL: postgres://postgres:test@test-db:5432/priceradar_test
+      REDIS_HOST: test-redis
+      REDIS_PORT: 6379
+      NODE_ENV: test
+      MULTI_TENANT: 'true'
+      JWT_ACCESS_SECRET: test-secret-do-not-use-in-prod
+      JWT_REFRESH_SECRET: test-refresh-do-not-use-in-prod
+      LOG_LEVEL: error
+      FRONTEND_URL: http://localhost:5173
+      GOOGLE_APPLICATION_CREDENTIALS: ''
+      OPENAI_API_KEY: ''
+      SENTRY_DSN: ''
+      TELEGRAM_BOT_TOKEN: ''
+      IIKO_API_URL: ''
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_started
+    volumes:
+      - ./:/workspace
+      - /workspace/backend/node_modules
