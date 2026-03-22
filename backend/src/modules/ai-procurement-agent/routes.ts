@@ -3,7 +3,8 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../../auth/middleware.js';
 import { requireModule } from '../_shared/requireModule.js';
 import * as agentRepo from './repository.js';
-import * as agentService from './service.js';
+import * as procurementRecs from '../../models/procurementRecommendationsModel.js';
+import { enrichRecommendationsWithAI } from '../../services/aiProcurementAgent.js';
 
 const router = Router();
 router.use(requireModule('ai_procurement_agent'));
@@ -11,23 +12,22 @@ router.use(requireModule('ai_procurement_agent'));
 router.post('/recommendations', async (req: AuthRequest, res: Response) => {
   try {
     const orgId = req.user!.organizationId!;
-    const input: import('./types.js').ProcurementRecommendationInput = {
-      product_prices: Array.isArray(req.body?.product_prices) ? req.body.product_prices : [],
-      price_forecasts: req.body?.price_forecasts,
-      stock_levels: req.body?.stock_levels,
-      supplier_prices: req.body?.supplier_prices,
-      consumption_rates: req.body?.consumption_rates,
-    };
-    if (!input.product_prices.length && !input.supplier_prices?.length) {
-      const prices = await agentRepo.latestPricesForOrg(orgId);
-      input.supplier_prices = prices.map((r: { product_id: string; price: number; supplier_id: string }) => ({
-        product_id: r.product_id,
-        price: Number(r.price),
-        supplier_id: r.supplier_id,
-      }));
+    const hasYandex = Boolean(process.env.YANDEX_API_KEY && process.env.YANDEX_FOLDER_ID);
+
+    if (hasYandex) {
+      const recommendations = await enrichRecommendationsWithAI(orgId);
+      return res.json({ recommendations, source: 'yandex' });
     }
-    const out = await agentService.fetchRecommendations(input);
-    res.json(out);
+
+    const recs = await procurementRecs.listActive(orgId);
+    return res.json({
+      recommendations: recs.map((r) => ({
+        ...r,
+        ai_explanation: null,
+        ai_priority: r.priority,
+      })),
+      source: 'rule_based',
+    });
   } catch (e) {
     console.error(e);
     res.status(502).json({ error: 'Procurement AI unavailable' });

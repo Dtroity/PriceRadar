@@ -1,3 +1,5 @@
+/// <reference types="node" resolution-mode="require"/>
+/// <reference types="node" resolution-mode="require"/>
 import type { NormalizedRow } from '../types/index.js';
 /**
  * Simple CSV parser (comma or semicolon separated).

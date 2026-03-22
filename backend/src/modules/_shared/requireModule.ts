@@ -16,8 +16,9 @@ export function requireModule(moduleKey: string) {
       const ok = await organizationHasModule(orgId, moduleKey);
       if (!ok) {
         return res.status(403).json({
-          error: 'module not available in your subscription plan',
+          error: 'Module not available',
           module: moduleKey,
+          upgrade_hint: 'Обратитесь к администратору для подключения модуля',
         });
       }
       next();

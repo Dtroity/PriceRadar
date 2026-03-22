@@ -1,46 +1,39 @@
-import OpenAI from 'openai';
-import { config } from '../config.js';
 import { fetchWithRetry } from '../services/http.js';
+import { yandexComplete, parseYandexJsonResponse } from '../services/yandexGptClient.js';
 
-export type AiModelSource = 'openai' | 'ollama';
+export type AiModelSource = 'yandex' | 'ollama';
 
 export interface AiClientOptions {
   model?: string;
 }
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const AI_MODEL = process.env.AI_MODEL ?? 'gpt-4o-mini';
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
 
 function getSource(): AiModelSource {
-  if (OPENAI_API_KEY) return 'openai';
+  if (process.env.YANDEX_API_KEY && process.env.YANDEX_FOLDER_ID) return 'yandex';
   return 'ollama';
 }
-
-const openai = OPENAI_API_KEY
-  ? new OpenAI({
-      apiKey: OPENAI_API_KEY,
-    })
-  : null;
 
 export async function completeJson<T = unknown>(prompt: string, options?: AiClientOptions): Promise<T> {
   const source = getSource();
   const model = options?.model ?? AI_MODEL;
 
-  if (source === 'openai') {
-    if (!openai) {
-      throw new Error('OPENAI_API_KEY is not configured');
-    }
-    const response = await openai.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }],
+  if (source === 'yandex') {
+    const raw = await yandexComplete([{ role: 'user', text: prompt }], 'lite', {
       temperature: 0,
+      maxTokens: 2000,
     });
-    const content = response.choices[0]?.message?.content ?? '';
-    return safeParseJson<T>(content);
+    if (!raw) {
+      throw new Error('YandexGPT is not configured or request failed');
+    }
+    const parsed = parseYandexJsonResponse<T>(raw);
+    if (parsed == null) {
+      throw new Error('YandexGPT response does not contain valid JSON');
+    }
+    return parsed;
   }
 
-  // Ollama-compatible fallback
   const res = await fetchWithRetry(`${OLLAMA_URL}/api/chat`, {
     method: 'POST',
     headers: {
@@ -70,4 +63,3 @@ function safeParseJson<T>(text: string): T {
   const jsonText = trimmed.slice(jsonStart, jsonEnd + 1);
   return JSON.parse(jsonText) as T;
 }
-

@@ -4,11 +4,20 @@ import { useAuth } from '../auth/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import LocaleSwitcher from '../components/LocaleSwitcher';
 
+const INDUSTRIES = [
+  { value: '', label: '— выберите —' },
+  { value: 'restaurant', label: 'Ресторан' },
+  { value: 'cafe', label: 'Кафе' },
+  { value: 'retail', label: 'Магазин' },
+  { value: 'production', label: 'Производство' },
+];
+
 export default function Register() {
   const [organizationName, setOrganizationName] = useState('');
   const [slug, setSlug] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [industry, setIndustry] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { registerOrg } = useAuth();
@@ -20,7 +29,13 @@ export default function Register() {
     setError('');
     setLoading(true);
     try {
-      await registerOrg?.(organizationName, slug || organizationName.toLowerCase().replace(/\s+/g, '-'), email, password);
+      await registerOrg?.(
+        organizationName,
+        slug || organizationName.toLowerCase().replace(/\s+/g, '-'),
+        email,
+        password,
+        industry || undefined
+      );
       navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : t('auth.registrationFailed'));
@@ -51,6 +66,18 @@ export default function Register() {
             className="w-full px-3 py-2 border border-slate-300 rounded-lg mb-4"
             required
           />
+          <label className="block text-sm font-medium text-slate-700 mb-1">Сфера деятельности</label>
+          <select
+            value={industry}
+            onChange={(e) => setIndustry(e.target.value)}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg mb-4 bg-white"
+          >
+            {INDUSTRIES.map((o) => (
+              <option key={o.value || '_'} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
           <label className="block text-sm font-medium text-slate-700 mb-1">{t('auth.workspaceSlugLabel')}</label>
           <input
             type="text"
@@ -75,6 +102,13 @@ export default function Register() {
             className="w-full px-3 py-2 border border-slate-300 rounded-lg mb-6"
             required
           />
+          <p className="text-xs text-slate-600 mb-4 p-2 bg-slate-50 rounded-lg border border-slate-100">
+            Вы начинаете с тарифа <strong>Free</strong>. Расширение — через администратора или{' '}
+            <Link to="/pricing" className="underline">
+              тарифы
+            </Link>
+            .
+          </p>
           <button
             type="submit"
             disabled={loading}

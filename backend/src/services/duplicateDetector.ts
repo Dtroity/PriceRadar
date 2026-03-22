@@ -1,5 +1,6 @@
 import type { Product } from '../types/index.js';
 import * as productsModel from '../models/products.js';
+import { pool } from '../db/pool.js';
 
 export function levenshtein(a: string, b: string): number {
   const m = a.length;
@@ -39,7 +40,32 @@ export function nameSimilarity(a: string, b: string): number {
 /** @alias nameSimilarity — used in tests / external API. */
 export const similarity = nameSimilarity;
 
-export async function findDuplicatePairs(
+function pairKey(id1: string, id2: string): string {
+  return id1 < id2 ? `${id1}|${id2}` : `${id2}|${id1}`;
+}
+
+function mergeDuplicatePairMaps(
+  a: Array<{ product1: Product; product2: Product; similarity: number }>,
+  b: Array<{ product1: Product; product2: Product; similarity: number }>
+): Array<{ product1: Product; product2: Product; similarity: number }> {
+  const map = new Map<
+    string,
+    { product1: Product; product2: Product; similarity: number }
+  >();
+  for (const p of a) {
+    map.set(pairKey(p.product1.id, p.product2.id), p);
+  }
+  for (const p of b) {
+    const k = pairKey(p.product1.id, p.product2.id);
+    const cur = map.get(k);
+    if (!cur || p.similarity > cur.similarity) {
+      map.set(k, p);
+    }
+  }
+  return [...map.values()].sort((x, y) => y.similarity - x.similarity);
+}
+
+export async function findLevenshteinDuplicatePairs(
   organizationId: string,
   threshold: number
 ): Promise<Array<{ product1: Product; product2: Product; similarity: number }>> {
@@ -57,6 +83,58 @@ export async function findDuplicatePairs(
   }
   pairs.sort((x, y) => y.similarity - x.similarity);
   return pairs;
+}
+
+/**
+ * Cosine similarity via pgvector (1 - cosine distance). Only pairs where both rows have embeddings.
+ */
+export async function findEmbeddingDuplicatePairs(
+  organizationId: string,
+  threshold: number
+): Promise<Array<{ product1: Product; product2: Product; similarity: number }>> {
+  const { rows } = await pool.query<{ id1: string; id2: string; sim: string }>(
+    `SELECT p1.id AS id1, p2.id AS id2,
+            (1 - (p1.name_embedding <=> p2.name_embedding))::float8 AS sim
+     FROM products p1
+     INNER JOIN products p2
+       ON p1.organization_id = p2.organization_id AND p1.id < p2.id
+     WHERE p1.organization_id = $1::uuid
+       AND p1.name_embedding IS NOT NULL
+       AND p2.name_embedding IS NOT NULL
+       AND (1 - (p1.name_embedding <=> p2.name_embedding)) >= $2`,
+    [organizationId, threshold]
+  );
+  if (rows.length === 0) return [];
+  const products = await productsModel.getAllProducts(organizationId);
+  const byId = new Map(products.map((p) => [p.id, p]));
+  const pairs: Array<{ product1: Product; product2: Product; similarity: number }> = [];
+  for (const r of rows) {
+    const p1 = byId.get(r.id1);
+    const p2 = byId.get(r.id2);
+    if (p1 && p2) {
+      pairs.push({ product1: p1, product2: p2, similarity: Number(r.sim) });
+    }
+  }
+  pairs.sort((x, y) => y.similarity - x.similarity);
+  return pairs;
+}
+
+export async function findDuplicatePairs(
+  organizationId: string,
+  threshold: number
+): Promise<Array<{ product1: Product; product2: Product; similarity: number }>> {
+  const leven = await findLevenshteinDuplicatePairs(organizationId, threshold);
+  const { rows } = await pool.query<{ c: string }>(
+    `SELECT COUNT(*)::text AS c FROM products
+     WHERE organization_id = $1::uuid AND name_embedding IS NOT NULL`,
+    [organizationId]
+  );
+  const nEmb = parseInt(rows[0]?.c ?? '0', 10);
+  if (nEmb < 2) {
+    return leven;
+  }
+  const emb = await findEmbeddingDuplicatePairs(organizationId, threshold);
+  return mergeDuplicatePairMaps(leven, emb);
 }
 
 /**

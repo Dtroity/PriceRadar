@@ -3,6 +3,7 @@ import type { AuthRequest } from '../auth/middleware.js';
 import * as analyticsModel from '../models/analyticsModel.js';
 import * as anomaliesModel from '../models/anomaliesModel.js';
 import { logger } from '../utils/logger.js';
+import { forecastPriceForProduct } from '../services/priceForecastService.js';
 
 function requireOrg(req: AuthRequest, res: Response): string | null {
   const orgId = req.user?.organizationId;
@@ -11,6 +12,30 @@ function requireOrg(req: AuthRequest, res: Response): string | null {
     return null;
   }
   return orgId;
+}
+
+export async function priceForecast(req: AuthRequest, res: Response) {
+  try {
+    const orgId = requireOrg(req, res);
+    if (!orgId) return;
+    const productId = req.query.product_id as string;
+    if (!productId) {
+      return res.status(400).json({ error: 'product_id is required' });
+    }
+    const horizonRaw = req.query.horizon_days ? parseInt(String(req.query.horizon_days), 10) : 14;
+    const horizonDays = Number.isFinite(horizonRaw) && horizonRaw > 0 ? horizonRaw : 14;
+    const result = await forecastPriceForProduct({
+      organizationId: orgId,
+      productId,
+      horizonDays,
+    });
+    return res.json(result);
+  } catch (err) {
+    const status = (err as Error & { status?: number }).status;
+    if (status === 404) return res.status(404).json({ error: 'Product not found' });
+    logger.error({ err }, 'priceForecast failed');
+    return res.status(500).json({ error: 'Failed to forecast price' });
+  }
 }
 
 export async function priceHistory(req: AuthRequest, res: Response) {

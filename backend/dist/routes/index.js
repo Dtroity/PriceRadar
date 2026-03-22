@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { authMiddleware, requireRole } from '../auth/middleware.js';
-import { z } from 'zod';
 import * as authController from '../controllers/authController.js';
 import * as suppliersController from '../controllers/suppliersController.js';
 import * as productsController from '../controllers/productsController.js';
@@ -8,19 +7,28 @@ import * as priceChangesController from '../controllers/priceChangesController.j
 import * as uploadController from '../controllers/uploadController.js';
 import * as telegramController from '../controllers/telegramController.js';
 import * as documentsController from '../controllers/documentsController.js';
-import * as metricsController from '../controllers/metricsController.js';
 import * as recipesController from '../controllers/recipesController.js';
 import * as aiController from '../controllers/aiController.js';
 import * as supplierRecommendationsController from '../controllers/supplierRecommendationsController.js';
 import * as foodcostController from '../controllers/foodcostController.js';
 import * as priceTrendController from '../controllers/priceTrendController.js';
 import * as documentMetricsController from '../controllers/documentMetricsController.js';
+import * as analyticsController from '../controllers/analyticsController.js';
+import * as procurementController from '../controllers/procurementController.js';
+import * as iikoIntegrationController from '../controllers/iikoIntegrationController.js';
+import * as adminController from '../controllers/adminController.js';
+import * as notificationsController from '../controllers/notificationsController.js';
+import { sentryUserMiddleware } from '../middleware/sentryUserMiddleware.js';
 import { uploadMiddleware, ensureUploadDir } from '../middleware/upload.js';
 import { mountModuleRoutes } from '../modules/registry.js';
 import { requireModule } from '../modules/_shared/requireModule.js';
 import { validateBody } from '../middleware/validation.js';
+import { MergeProductsSchema, NormalizeProductsSchema } from '../validators/products.js';
+import { AddItemSchema, CreateOrderSchema, PatchItemSchema, PatchOrderHeaderSchema, UpdateOrderStatusSchema, } from '../validators/procurement.js';
+import { ConfirmDocumentSchema } from '../validators/documents.js';
 import { pool } from '../db/pool.js';
 import { checkRedisConnection } from '../db/redis.js';
+import { z } from 'zod';
 const router = Router();
 const registerSchema = z.object({
     email: z.string().email(),
@@ -36,7 +44,62 @@ const registerOrgSchema = z.object({
     slug: z.string().min(1),
     email: z.string().email(),
     password: z.string().min(6),
+    industry: z.string().max(80).optional(),
 });
+const adminCreateOrgSchema = z.object({
+    name: z.string().min(1),
+    plan: z.enum(['free', 'pro', 'enterprise']).optional(),
+    adminEmail: z.string().email(),
+    adminPassword: z.string().min(6),
+});
+const adminPatchOrgSchema = z
+    .object({
+    plan: z.enum(['free', 'pro', 'enterprise']).optional(),
+    is_active: z.boolean().optional(),
+    max_users: z.number().int().positive().optional(),
+    max_documents_mo: z.number().int().positive().optional(),
+    notes: z.string().nullable().optional(),
+    plan_expires_at: z.string().nullable().optional(),
+})
+    .strict();
+const adminPatchModuleSchema = z
+    .object({
+    module: z.string().min(1),
+    enabled: z.boolean(),
+})
+    .strict();
+const notificationsPatchSchema = z
+    .object({
+    notify_email: z.string().email().nullable().optional(),
+    notify_email_enabled: z.boolean().optional(),
+    vk_notify_phone: z.string().max(32).nullable().optional(),
+    vk_notify_enabled: z.boolean().optional(),
+    webpush_enabled: z.boolean().optional(),
+    notify_events: z
+        .object({
+        anomaly_high: z.boolean().optional(),
+        anomaly_medium: z.boolean().optional(),
+        recommendation: z.boolean().optional(),
+        order_status: z.boolean().optional(),
+        price_report_weekly: z.boolean().optional(),
+    })
+        .optional(),
+})
+    .strict();
+const webpushSubscribeSchema = z
+    .object({
+    endpoint: z.string().min(1),
+    p256dh: z.string().min(1),
+    auth: z.string().min(1),
+})
+    .strict();
+const webpushDeleteSchema = z
+    .object({
+    endpoint: z.string().min(1).optional(),
+    id: z.string().uuid().optional(),
+})
+    .strict()
+    .refine((d) => d.endpoint || d.id, { message: 'endpoint or id required' });
 const loginOrgSchema = z.object({
     organizationSlug: z.string().min(1),
     email: z.string().email(),
@@ -47,14 +110,6 @@ const refreshSchema = z.object({
 });
 const telegramAllowSchema = z.object({
     isAllowed: z.boolean(),
-});
-const productsNormalizeSchema = z.object({
-    rawNames: z.array(z.string().min(1)).min(1),
-    targetNormalizedName: z.string().min(1),
-});
-const productsMergeSchema = z.object({
-    sourceProductIds: z.array(z.string().uuid()).min(1),
-    targetProductId: z.string().uuid(),
 });
 function listRegisteredRoutes() {
     const out = [];
@@ -85,8 +140,6 @@ function listRegisteredRoutes() {
     }
     return out;
 }
-// Metrics (no auth, for Prometheus)
-router.get('/metrics/prometheus', metricsController.prometheus);
 // Healthcheck (public diagnostics)
 router.get('/health', async (_req, res) => {
     let db = 'disconnected';
@@ -120,21 +173,64 @@ router.post('/auth/login-org', validateBody(loginOrgSchema), authController.logi
 router.post('/auth/refresh', validateBody(refreshSchema), authController.refresh);
 // Protected
 router.use(authMiddleware);
+router.use(sentryUserMiddleware);
 router.post('/auth/logout', authController.logout);
 router.get('/auth/me', authController.me);
 router.get('/debug/routes', requireRole('super_admin'), (_req, res) => {
     return res.json({ routes: listRegisteredRoutes() });
 });
+// Super-admin SaaS
+router.get('/admin/organizations', requireRole('super_admin'), adminController.listOrganizations);
+router.get('/admin/organizations/:id', requireRole('super_admin'), adminController.getOrganization);
+router.post('/admin/organizations', requireRole('super_admin'), validateBody(adminCreateOrgSchema), adminController.createOrganization);
+router.patch('/admin/organizations/:id', requireRole('super_admin'), validateBody(adminPatchOrgSchema), adminController.patchOrganization);
+router.get('/admin/organizations/:id/modules', requireRole('super_admin'), adminController.listOrgModules);
+router.patch('/admin/organizations/:id/modules', requireRole('super_admin'), validateBody(adminPatchModuleSchema), adminController.patchOrgModule);
+router.get('/admin/stats', requireRole('super_admin'), adminController.platformStats);
+// Notifications (org)
+router.get('/notifications/settings', notificationsController.getSettings);
+router.patch('/notifications/settings', validateBody(notificationsPatchSchema), notificationsController.patchSettings);
+router.post('/notifications/test', notificationsController.postTest);
+router.post('/notifications/webpush/subscribe', validateBody(webpushSubscribeSchema), notificationsController.postWebPushSubscribe);
+router.delete('/notifications/webpush/subscribe', validateBody(webpushDeleteSchema), notificationsController.deleteWebPushSubscribe);
+router.get('/notifications/vapid-public-key', notificationsController.getVapidPublicKey);
 router.get('/suppliers', suppliersController.list);
 router.get('/suppliers/recommendations', requireModule('supplier_intelligence'), supplierRecommendationsController.recommendations);
 router.get('/products', productsController.list);
 router.get('/products/duplicates', requireRole(['super_admin', 'org_admin']), productsController.getDuplicates);
 router.post('/products/auto-merge', requireRole(['super_admin', 'org_admin']), productsController.postAutoMerge);
 router.get('/products/normalize', productsController.listNormalizationCandidates);
-router.post('/products/normalize', validateBody(productsNormalizeSchema), productsController.normalizeProducts);
-router.post('/products/merge', requireRole(['super_admin', 'org_admin']), validateBody(productsMergeSchema), productsController.mergeProducts);
+router.post('/products/normalize', validateBody(NormalizeProductsSchema), productsController.normalizeProducts);
+router.post('/products/merge', requireRole(['super_admin', 'org_admin']), validateBody(MergeProductsSchema), productsController.mergeProducts);
 router.get('/products/:id/history', productsController.getProductHistory);
 router.patch('/products/:id/priority', productsController.setPriority);
+// Price analytics (org context required)
+router.get('/analytics/prices/history', analyticsController.priceHistory);
+router.get('/analytics/prices/forecast', analyticsController.priceForecast);
+router.get('/analytics/prices/best-suppliers', analyticsController.bestSuppliers);
+router.get('/analytics/prices/summary', analyticsController.priceSummary);
+router.get('/analytics/anomalies', analyticsController.listAnomalies);
+router.get('/analytics/anomalies/unread-count', analyticsController.unreadAnomaliesCount);
+router.patch('/analytics/anomalies/:id/acknowledge', analyticsController.acknowledgeAnomaly);
+// Procurement (заявки и рекомендации закупок)
+const procurementRoles = ['super_admin', 'org_admin', 'manager'];
+router.get('/procurement/orders', requireRole(procurementRoles), procurementController.listOrders);
+router.post('/procurement/orders', requireRole(procurementRoles), validateBody(CreateOrderSchema), procurementController.createOrder);
+router.get('/procurement/orders/:id', requireRole(procurementRoles), procurementController.getOrder);
+router.patch('/procurement/orders/:id', requireRole(procurementRoles), validateBody(PatchOrderHeaderSchema), procurementController.patchOrder);
+router.patch('/procurement/orders/:id/status', requireRole(procurementRoles), validateBody(UpdateOrderStatusSchema), procurementController.patchOrderStatus);
+router.post('/procurement/orders/:id/items', requireRole(procurementRoles), validateBody(AddItemSchema), procurementController.addItem);
+router.patch('/procurement/orders/:id/items/:itemId', requireRole(procurementRoles), validateBody(PatchItemSchema), procurementController.patchItem);
+router.delete('/procurement/orders/:id/items/:itemId', requireRole(procurementRoles), procurementController.deleteItem);
+router.get('/procurement/price-hint', requireRole(procurementRoles), procurementController.priceHint);
+router.get('/procurement/recommendations', requireRole(procurementRoles), procurementController.listRecommendations);
+router.post('/procurement/recommendations/generate', requireRole(procurementRoles), procurementController.runGenerateRecommendations);
+router.patch('/procurement/recommendations/:id/accept', requireRole(procurementRoles), procurementController.acceptRecommendation);
+router.patch('/procurement/recommendations/:id/dismiss', requireRole(procurementRoles), procurementController.dismissRecommendation);
+// iiko (организация)
+router.post('/integrations/iiko/sync', requireModule('iiko_integration'), requireRole(['org_admin', 'super_admin']), iikoIntegrationController.postSync);
+router.get('/integrations/iiko/status', requireModule('iiko_integration'), requireRole(['org_admin', 'super_admin', 'manager']), iikoIntegrationController.getStatus);
+router.patch('/integrations/iiko/settings', requireModule('iiko_integration'), requireRole(['org_admin', 'super_admin']), iikoIntegrationController.patchSettings);
 router.get('/price-changes', requireModule('price_monitoring'), priceChangesController.list);
 router.get('/products/:productId/price-history', requireModule('price_monitoring'), priceChangesController.priceHistory);
 // Upload: ensure dir then multer then handler
@@ -158,7 +254,7 @@ router.post('/documents/upload', requireModule('invoice_ai'), async (req, res, n
 router.get('/documents', requireModule('invoice_ai'), documentsController.list);
 router.get('/documents/:id', requireModule('invoice_ai'), documentsController.getById);
 router.patch('/documents/:id/items/:itemId', requireModule('invoice_ai'), documentsController.patchItem);
-router.post('/documents/:id/confirm', requireModule('invoice_ai'), documentsController.confirm);
+router.post('/documents/:id/confirm', requireModule('invoice_ai'), validateBody(ConfirmDocumentSchema), documentsController.confirm);
 // FoodCost
 router.get('/recipes', requireModule('foodcost'), recipesController.list);
 router.post('/recipes/:id/consume', requireModule('foodcost'), recipesController.consume);
@@ -173,6 +269,9 @@ router.post('/ai/training-dataset', requireModule('invoice_ai'), aiController.tr
 mountModuleRoutes(router);
 // Telegram (admin only for management)
 router.get('/telegram/status', requireModule('telegram_bot'), telegramController.getBotStatus);
+router.get('/telegram/org-settings', requireModule('telegram_bot'), requireRole(['org_admin', 'super_admin']), telegramController.getOrgNotifySettings);
+router.patch('/telegram/org-settings', requireModule('telegram_bot'), requireRole(['org_admin', 'super_admin']), telegramController.patchOrgNotifySettings);
+router.post('/telegram/test', requireModule('telegram_bot'), requireRole(['org_admin', 'super_admin']), telegramController.postTestMessage);
 router.get('/telegram/users', requireModule('telegram_bot'), requireRole(['super_admin', 'org_admin']), telegramController.listUsers);
 router.patch('/telegram/users/:telegramId/allow', requireModule('telegram_bot'), requireRole(['super_admin', 'org_admin']), validateBody(telegramAllowSchema), telegramController.allowUser);
 router.delete('/telegram/users/:id', requireModule('telegram_bot'), requireRole(['super_admin', 'org_admin']), telegramController.removeUser);

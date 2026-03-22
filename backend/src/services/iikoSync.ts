@@ -1,6 +1,7 @@
 import { pool } from '../db/pool.js';
 import * as orgSettings from '../models/organizationsSettingsModel.js';
 import { logger } from '../utils/logger.js';
+import { refreshProductEmbedding } from './embeddingService.js';
 
 interface NomenclatureItem {
   id?: string;
@@ -80,10 +81,12 @@ export async function syncIikoNomenclature(
       );
 
       if (mapRows[0]) {
+        const display = name.slice(0, 500);
         await pool.query(
           `UPDATE products SET name = $2 WHERE id = $1::uuid AND organization_id = $3::uuid`,
-          [mapRows[0].product_id, name.slice(0, 500), organizationId]
+          [mapRows[0].product_id, display, organizationId]
         );
+        void refreshProductEmbedding(mapRows[0].product_id, organizationId, display);
         updated++;
       } else {
         const norm = name.toLowerCase().slice(0, 500);
@@ -99,6 +102,7 @@ export async function syncIikoNomenclature(
            VALUES ($1::uuid, $2::uuid, $3)`,
           [organizationId, pid, String(iikoId)]
         );
+        void refreshProductEmbedding(pid, organizationId, name.slice(0, 500));
         created++;
       }
     }

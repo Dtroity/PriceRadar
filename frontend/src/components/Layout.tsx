@@ -35,6 +35,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Link to="/telegram" className="text-slate-600 hover:text-slate-900">{t('nav.telegram')}</Link>
           )}
           <Link to="/settings" className="text-slate-600 hover:text-slate-900">{t('nav.settings')}</Link>
+          <Link to="/settings/notifications" className="text-slate-600 hover:text-slate-900">
+            Уведомления
+          </Link>
+          {user?.role === 'super_admin' && (
+            <Link to="/admin" className="text-slate-600 hover:text-slate-900 font-medium">
+              Админ
+            </Link>
+          )}
         </nav>
         <div className="flex items-center gap-4">
           <LocaleSwitcher />

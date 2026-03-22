@@ -5,6 +5,8 @@ import * as usersMt from '../models/users-mt.js';
 import * as orgModel from '../models/organizations.js';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../auth/jwt.js';
 import { config } from '../config.js';
+import { pool } from '../db/pool.js';
+import * as orgModules from '../models/organizationModulesModel.js';
 function getUsersModel(payload) {
     if (config.multiTenant && payload?.organizationId)
         return usersMt;
@@ -114,7 +116,7 @@ export async function me(req, res) {
 // --- Multi-tenant (ProcureAI) ---
 export async function registerOrg(req, res) {
     try {
-        const { organizationName, slug, email, password } = req.body;
+        const { organizationName, slug, email, password, industry } = req.body;
         if (!organizationName || !slug || !email || !password) {
             return res.status(400).json({ error: 'organizationName, slug, email and password required' });
         }
@@ -122,20 +124,45 @@ export async function registerOrg(req, res) {
         if (existingOrg) {
             return res.status(409).json({ error: 'Organization slug already taken' });
         }
-        const org = await orgModel.create(organizationName, slug);
-        const user = await usersMt.createUser(org.id, email, password, 'org_admin');
-        const accessToken = signAccessToken(user.id, user.email, user.role, org.id);
-        const refreshToken = signRefreshToken(user.id, user.email, user.role, org.id);
-        const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        await usersMt.saveRefreshToken(user.id, tokenHash, expiresAt);
-        return res.status(201).json({
-            organization: { id: org.id, name: org.name, slug: org.slug },
-            user: { id: user.id, organization_id: user.organization_id, email: user.email, role: user.role },
-            accessToken,
-            refreshToken,
-            expiresIn: 900,
-        });
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const s = slug
+                .toLowerCase()
+                .replace(/[^a-z0-9-]/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+            const { rows: orgRows } = await client.query(`INSERT INTO organizations (name, slug, plan, industry)
+         VALUES ($1, $2, 'free', $3)
+         RETURNING id, name, slug, created_at`, [organizationName, s || 'org', industry ?? null]);
+            const org = orgRows[0];
+            await orgModules.seedModulesForOrganization(org.id, 'free', client);
+            const password_hash = await bcrypt.hash(password, 10);
+            const { rows: userRows } = await client.query(`INSERT INTO users (organization_id, email, password_hash, role)
+         VALUES ($1::uuid, $2, $3, 'org_admin')
+         RETURNING id, organization_id, email, role, created_at`, [org.id, email, password_hash]);
+            const user = userRows[0];
+            await client.query('COMMIT');
+            const accessToken = signAccessToken(user.id, user.email, user.role, org.id);
+            const refreshToken = signRefreshToken(user.id, user.email, user.role, org.id);
+            const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+            const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+            await usersMt.saveRefreshToken(user.id, tokenHash, expiresAt);
+            return res.status(201).json({
+                organization: { id: org.id, name: org.name, slug: org.slug },
+                user: { id: user.id, organization_id: user.organization_id, email: user.email, role: user.role },
+                accessToken,
+                refreshToken,
+                expiresIn: 900,
+            });
+        }
+        catch (e) {
+            await client.query('ROLLBACK');
+            throw e;
+        }
+        finally {
+            client.release();
+        }
     }
     catch (err) {
         console.error(err);

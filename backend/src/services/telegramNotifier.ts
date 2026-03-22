@@ -42,47 +42,15 @@ function reasonRu(r: string): string {
   return r;
 }
 
-export async function notify(organizationId: string, event: NotifyEvent): Promise<void> {
+export async function sendTelegramRaw(chatId: string, text: string): Promise<void> {
   const bot = getBot();
-  if (!bot) return;
+  if (!bot || !text) return;
+  await bot.sendMessage(chatId, text);
+}
 
-  const { telegram_chat_id, telegram_notify } = await orgSettings.getTelegramSettings(organizationId);
-  if (!telegram_chat_id) return;
-
-  const chatId = telegram_chat_id;
-  let text = '';
-
-  try {
-    if (event.type === 'anomaly') {
-      const a = event.anomaly;
-      if (a.severity === 'high' && !telegram_notify.anomaly_high) return;
-      if (a.severity === 'medium' && !telegram_notify.anomaly_medium) return;
-      if (a.severity === 'low') return;
-      if (a.severity === 'high') {
-        text = `🔴 Аномалия цены!\nТовар: ${a.product_name}\nПоставщик: ${a.supplier_name}\nБыло: ${a.price_before} → Стало: ${a.price_after} (${a.change_pct >= 0 ? '+' : ''}${a.change_pct.toFixed(1)}%)\nСерьёзность: ВЫСОКАЯ`;
-      } else {
-        text = `🟡 Изменение цены\nТовар: ${a.product_name} | ${a.change_pct >= 0 ? '+' : ''}${a.change_pct.toFixed(1)}%`;
-      }
-    } else if (event.type === 'recommendation') {
-      if (!telegram_notify.recommendation) return;
-      const r = event.rec;
-      const price =
-        r.suggested_price != null ? `${parseFloat(r.suggested_price).toFixed(2)}` : '—';
-      text = `💡 Рекомендация закупки\nТовар: ${r.product_name ?? r.product_id}\nПричина: ${reasonRu(r.reason)}\nПредложенная цена: ${price}`;
-    } else if (event.type === 'recommendation_batch') {
-      if (!telegram_notify.recommendation || event.lines.length === 0) return;
-      text = `💡 Новые рекомендации (${event.lines.length})\n${event.lines.slice(0, 20).join('\n')}`;
-      if (event.lines.length > 20) text += `\n…`;
-    } else if (event.type === 'order_status') {
-      if (!telegram_notify.order_status) return;
-      const o = event.order;
-      text = `📦 Заявка ${o.title ?? '#'}\nСтатус: ${event.oldStatus} → ${event.newStatus}`;
-    }
-
-    if (text) await bot.sendMessage(chatId, text);
-  } catch (err) {
-    logger.warn({ err, organizationId, event: event.type }, 'telegram notify failed');
-  }
+export async function notify(organizationId: string, event: NotifyEvent): Promise<void> {
+  const { dispatchNotifications } = await import('./notificationService.js');
+  await dispatchNotifications(organizationId, event);
 }
 
 export async function notifyRecommendationBatch(

@@ -3,7 +3,7 @@
 
 services:
   test-db:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     environment:
       POSTGRES_DB: priceradar_test
       POSTGRES_USER: postgres
@@ -34,7 +34,8 @@ services:
       LOG_LEVEL: error
       FRONTEND_URL: http://localhost:5173
       GOOGLE_APPLICATION_CREDENTIALS: ''
-      OPENAI_API_KEY: ''
+      YANDEX_API_KEY: ''
+      YANDEX_FOLDER_ID: ''
       SENTRY_DSN: ''
       TELEGRAM_BOT_TOKEN: ''
       IIKO_API_URL: ''

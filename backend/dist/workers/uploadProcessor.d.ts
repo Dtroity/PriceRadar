@@ -1,3 +1,4 @@
+/// <reference path="../../src/types/global.d.ts" />
 import type { Job } from 'bullmq';
 import type { SourceType } from '../types/index.js';
 export interface UploadJobPayload {

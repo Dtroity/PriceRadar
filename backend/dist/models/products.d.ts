@@ -6,6 +6,12 @@ export declare function createProduct(name: string, normalizedName: string, isPr
 export declare function findOrCreateProduct(name: string, normalizedName: string, isPriority?: boolean, organizationId?: string): Promise<Product>;
 export declare function setProductPriority(productId: string, isPriority: boolean): Promise<void>;
 export declare function setProductPriorityWithAudit(productId: string, isPriority: boolean, organizationId: string, actorUserId: string | null): Promise<void>;
+/**
+ * Alias normalization + ensure product + audit in a single transaction.
+ */
+export declare function normalizeAliasesAndAuditTransaction(organizationId: string, rawNames: string[], targetDisplayName: string, normalizedTarget: string, actorUserId: string | null): Promise<{
+    updated: number;
+}>;
 export interface MergeProductsParams {
     organizationId: string;
     targetProductId: string;

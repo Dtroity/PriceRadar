@@ -1,4 +1,6 @@
 import * as telegramUsersModel from '../models/telegramUsers.js';
+import * as orgSettings from '../models/organizationsSettingsModel.js';
+import { sendTestMessage } from '../services/telegramNotifier.js';
 import { config } from '../config.js';
 export async function getBotStatus(_req, res) {
     return res.json({
@@ -40,6 +42,48 @@ export async function allowUser(req, res) {
     catch (err) {
         console.error(err);
         return res.status(500).json({ error: 'Failed to update user' });
+    }
+}
+export async function getOrgNotifySettings(req, res) {
+    try {
+        const organizationId = req.user?.organizationId;
+        if (!organizationId)
+            return res.status(400).json({ error: 'Organization required' });
+        const s = await orgSettings.getTelegramSettings(organizationId);
+        return res.json(s);
+    }
+    catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Failed' });
+    }
+}
+export async function patchOrgNotifySettings(req, res) {
+    try {
+        const organizationId = req.user?.organizationId;
+        if (!organizationId)
+            return res.status(400).json({ error: 'Organization required' });
+        const body = req.body;
+        await orgSettings.saveTelegramOrgSettings(organizationId, body);
+        return res.json({ ok: true });
+    }
+    catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Failed' });
+    }
+}
+export async function postTestMessage(req, res) {
+    try {
+        const organizationId = req.user?.organizationId;
+        if (!organizationId)
+            return res.status(400).json({ error: 'Organization required' });
+        if (!config.telegram.botToken)
+            return res.status(503).json({ error: 'Bot not configured' });
+        await sendTestMessage(organizationId);
+        return res.json({ ok: true });
+    }
+    catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed';
+        return res.status(400).json({ error: msg });
     }
 }
 export async function removeUser(req, res) {

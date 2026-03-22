@@ -17,6 +17,8 @@ import * as documentMetricsController from '../controllers/documentMetricsContro
 import * as analyticsController from '../controllers/analyticsController.js';
 import * as procurementController from '../controllers/procurementController.js';
 import * as iikoIntegrationController from '../controllers/iikoIntegrationController.js';
+import * as adminController from '../controllers/adminController.js';
+import * as notificationsController from '../controllers/notificationsController.js';
 import { sentryUserMiddleware } from '../middleware/sentryUserMiddleware.js';
 import { uploadMiddleware, ensureUploadDir } from '../middleware/upload.js';
 import { mountModuleRoutes } from '../modules/registry.js';
@@ -54,7 +56,68 @@ const registerOrgSchema = z.object({
   slug: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(6),
+  industry: z.string().max(80).optional(),
 });
+
+const adminCreateOrgSchema = z.object({
+  name: z.string().min(1),
+  plan: z.enum(['free', 'pro', 'enterprise']).optional(),
+  adminEmail: z.string().email(),
+  adminPassword: z.string().min(6),
+});
+
+const adminPatchOrgSchema = z
+  .object({
+    plan: z.enum(['free', 'pro', 'enterprise']).optional(),
+    is_active: z.boolean().optional(),
+    max_users: z.number().int().positive().optional(),
+    max_documents_mo: z.number().int().positive().optional(),
+    notes: z.string().nullable().optional(),
+    plan_expires_at: z.string().nullable().optional(),
+  })
+  .strict();
+
+const adminPatchModuleSchema = z
+  .object({
+    module: z.string().min(1),
+    enabled: z.boolean(),
+  })
+  .strict();
+
+const notificationsPatchSchema = z
+  .object({
+    notify_email: z.string().email().nullable().optional(),
+    notify_email_enabled: z.boolean().optional(),
+    vk_notify_phone: z.string().max(32).nullable().optional(),
+    vk_notify_enabled: z.boolean().optional(),
+    webpush_enabled: z.boolean().optional(),
+    notify_events: z
+      .object({
+        anomaly_high: z.boolean().optional(),
+        anomaly_medium: z.boolean().optional(),
+        recommendation: z.boolean().optional(),
+        order_status: z.boolean().optional(),
+        price_report_weekly: z.boolean().optional(),
+      })
+      .optional(),
+  })
+  .strict();
+
+const webpushSubscribeSchema = z
+  .object({
+    endpoint: z.string().min(1),
+    p256dh: z.string().min(1),
+    auth: z.string().min(1),
+  })
+  .strict();
+
+const webpushDeleteSchema = z
+  .object({
+    endpoint: z.string().min(1).optional(),
+    id: z.string().uuid().optional(),
+  })
+  .strict()
+  .refine((d) => d.endpoint || d.id, { message: 'endpoint or id required' });
 
 const loginOrgSchema = z.object({
   organizationSlug: z.string().min(1),
@@ -153,6 +216,50 @@ router.get('/debug/routes', requireRole('super_admin'), (_req, res) => {
   return res.json({ routes: listRegisteredRoutes() });
 });
 
+// Super-admin SaaS
+router.get('/admin/organizations', requireRole('super_admin'), adminController.listOrganizations);
+router.get('/admin/organizations/:id', requireRole('super_admin'), adminController.getOrganization);
+router.post(
+  '/admin/organizations',
+  requireRole('super_admin'),
+  validateBody(adminCreateOrgSchema),
+  adminController.createOrganization
+);
+router.patch(
+  '/admin/organizations/:id',
+  requireRole('super_admin'),
+  validateBody(adminPatchOrgSchema),
+  adminController.patchOrganization
+);
+router.get('/admin/organizations/:id/modules', requireRole('super_admin'), adminController.listOrgModules);
+router.patch(
+  '/admin/organizations/:id/modules',
+  requireRole('super_admin'),
+  validateBody(adminPatchModuleSchema),
+  adminController.patchOrgModule
+);
+router.get('/admin/stats', requireRole('super_admin'), adminController.platformStats);
+
+// Notifications (org)
+router.get('/notifications/settings', notificationsController.getSettings);
+router.patch(
+  '/notifications/settings',
+  validateBody(notificationsPatchSchema),
+  notificationsController.patchSettings
+);
+router.post('/notifications/test', notificationsController.postTest);
+router.post(
+  '/notifications/webpush/subscribe',
+  validateBody(webpushSubscribeSchema),
+  notificationsController.postWebPushSubscribe
+);
+router.delete(
+  '/notifications/webpush/subscribe',
+  validateBody(webpushDeleteSchema),
+  notificationsController.deleteWebPushSubscribe
+);
+router.get('/notifications/vapid-public-key', notificationsController.getVapidPublicKey);
+
 router.get('/suppliers', suppliersController.list);
 router.get('/suppliers/recommendations', requireModule('supplier_intelligence'), supplierRecommendationsController.recommendations);
 router.get('/products', productsController.list);
@@ -179,6 +286,7 @@ router.patch('/products/:id/priority', productsController.setPriority);
 
 // Price analytics (org context required)
 router.get('/analytics/prices/history', analyticsController.priceHistory);
+router.get('/analytics/prices/forecast', analyticsController.priceForecast);
 router.get('/analytics/prices/best-suppliers', analyticsController.bestSuppliers);
 router.get('/analytics/prices/summary', analyticsController.priceSummary);
 router.get('/analytics/anomalies', analyticsController.listAnomalies);

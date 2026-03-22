@@ -76,10 +76,10 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ email, password, role: role || 'manager' }),
       }),
-    registerOrg: (organizationName: string, slug: string, email: string, password: string) =>
+    registerOrg: (organizationName: string, slug: string, email: string, password: string, industry?: string) =>
       request<{ user: User; organization: { id: string; name: string; slug: string }; accessToken: string; refreshToken: string }>('/auth/register-org', {
         method: 'POST',
-        body: JSON.stringify({ organizationName, slug, email, password }),
+        body: JSON.stringify({ organizationName, slug, email, password, ...(industry ? { industry } : {}) }),
       }),
     logout: (refreshToken?: string) =>
       request<{ ok: boolean }>('/auth/logout', {
@@ -222,6 +222,7 @@ export interface User {
   id: string;
   email: string;
   role: string;
+  organization_id?: string;
 }
 
 export interface Supplier {

@@ -1,5 +1,6 @@
 import { pool } from '../db/pool.js';
 import { insertAudit } from './productAuditLog.js';
+import { refreshProductEmbedding } from '../services/embeddingService.js';
 export async function getAllProducts(organizationId) {
     if (organizationId) {
         const { rows } = await pool.query('SELECT id, name, normalized_name, is_priority, created_at FROM products WHERE organization_id = $1 ORDER BY is_priority DESC, name', [organizationId]);
@@ -24,7 +25,9 @@ export async function createProduct(name, normalizedName, isPriority = false, or
     if (organizationId) {
         const { rows } = await pool.query(`INSERT INTO products (organization_id, name, normalized_name, is_priority) VALUES ($1, $2, $3, $4)
        RETURNING id, name, normalized_name, is_priority, created_at`, [organizationId, name, normalizedName, isPriority]);
-        return rows[0];
+        const row = rows[0];
+        void refreshProductEmbedding(row.id, organizationId, name);
+        return row;
     }
     const { rows } = await pool.query(`INSERT INTO products (name, normalized_name, is_priority) VALUES ($1, $2, $3)
      RETURNING id, name, normalized_name, is_priority, created_at`, [name, normalizedName, isPriority]);
@@ -45,21 +48,90 @@ export async function setProductPriority(productId, isPriority) {
     await pool.query('UPDATE products SET is_priority = $1 WHERE id = $2', [isPriority, productId]);
 }
 export async function setProductPriorityWithAudit(productId, isPriority, organizationId, actorUserId) {
-    const { rows } = await pool.query('SELECT is_priority FROM products WHERE id = $1 AND organization_id = $2', [productId, organizationId]);
-    if (!rows[0]) {
-        const err = new Error('Product not found');
-        err.status = 404;
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const { rows } = await client.query('SELECT is_priority FROM products WHERE id = $1 AND organization_id = $2 FOR UPDATE', [productId, organizationId]);
+        if (!rows[0]) {
+            const err = new Error('Product not found');
+            err.status = 404;
+            throw err;
+        }
+        const oldVal = rows[0].is_priority;
+        await client.query('UPDATE products SET is_priority = $1 WHERE id = $2', [isPriority, productId]);
+        await insertAudit({
+            organizationId,
+            productId,
+            action: 'update',
+            actorId: actorUserId,
+            meta: { field: 'is_priority', oldValue: oldVal, newValue: isPriority },
+        }, client);
+        await client.query('COMMIT');
+    }
+    catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+    }
+    finally {
+        client.release();
+    }
+}
+async function findProductByNormalizedNameWithClient(client, normalizedName, organizationId) {
+    const { rows } = await client.query('SELECT id, name, normalized_name, is_priority, created_at FROM products WHERE organization_id = $1 AND normalized_name = $2', [organizationId, normalizedName]);
+    return rows[0] ?? null;
+}
+async function createProductWithClient(client, name, normalizedName, isPriority, organizationId) {
+    const { rows } = await client.query(`INSERT INTO products (organization_id, name, normalized_name, is_priority) VALUES ($1, $2, $3, $4)
+     RETURNING id, name, normalized_name, is_priority, created_at`, [organizationId, name, normalizedName, isPriority]);
+    return rows[0];
+}
+async function findOrCreateProductWithClient(client, name, normalizedName, isPriority, organizationId) {
+    const existing = await findProductByNormalizedNameWithClient(client, normalizedName, organizationId);
+    if (existing) {
+        if (isPriority && !existing.is_priority) {
+            await client.query('UPDATE products SET is_priority = TRUE WHERE id = $1', [existing.id]);
+            return { ...existing, is_priority: true };
+        }
+        return existing;
+    }
+    return createProductWithClient(client, name, normalizedName, isPriority, organizationId);
+}
+/**
+ * Alias normalization + ensure product + audit in a single transaction.
+ */
+export async function normalizeAliasesAndAuditTransaction(organizationId, rawNames, targetDisplayName, normalizedTarget, actorUserId) {
+    const cleaned = rawNames.map((n) => n.trim()).filter(Boolean);
+    if (!cleaned.length) {
+        const err = new Error('empty rawNames');
+        err.status = 400;
         throw err;
     }
-    const oldVal = rows[0].is_priority;
-    await pool.query('UPDATE products SET is_priority = $1 WHERE id = $2', [isPriority, productId]);
-    await insertAudit({
-        organizationId,
-        productId,
-        action: 'update',
-        actorId: actorUserId,
-        meta: { field: 'is_priority', oldValue: oldVal, newValue: isPriority },
-    });
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const { rowCount } = await client.query(`UPDATE product_aliases
+       SET normalized_name = $1
+       WHERE organization_id = $2 AND raw_name = ANY($3::text[])`, [normalizedTarget.trim(), organizationId, cleaned]);
+        const updated = rowCount ?? 0;
+        const product = await findOrCreateProductWithClient(client, targetDisplayName, normalizedTarget, false, organizationId);
+        await insertAudit({
+            organizationId,
+            productId: product.id,
+            action: 'normalize',
+            actorId: actorUserId,
+            meta: { rawNames: cleaned, targetNormalizedName: normalizedTarget, updated },
+        }, client);
+        await client.query('COMMIT');
+        void refreshProductEmbedding(product.id, organizationId, targetDisplayName);
+        return { updated };
+    }
+    catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+    }
+    finally {
+        client.release();
+    }
 }
 /**
  * Atomically reassigns all product_id FKs from sources to target, merges stock / dedupes

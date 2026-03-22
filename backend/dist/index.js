@@ -1,7 +1,5 @@
-import express from 'express';
-import cors from 'cors';
 import { config } from './config.js';
-import routes from './routes/index.js';
+import createApp from './app.js';
 import { pool } from './db/pool.js';
 import { startWorkers } from './workers/queue.js';
 import { startOrderAutomationWorker } from './modules/order-automation/worker.js';
@@ -10,11 +8,14 @@ import { startSupplierIntelligenceWorker, supplierScoringQueue } from './modules
 import { startStockUpdateWorker } from './modules/stock/worker.js';
 import { startProcurementAutopilotWorker, procurementAutopilotQueue } from './modules/procurement-autopilot/worker.js';
 import { duplicateScanQueue, startDuplicateScanWorker } from './workers/duplicateScanWorker.js';
+import { RECOMMENDATIONS_ALL_ORGS, recommendationsQueue, startRecommendationsWorker, } from './workers/recommendationsWorker.js';
+import { IIKO_SYNC_ALL, iikoSyncQueue, startIikoSyncWorker } from './workers/iikoSyncWorker.js';
 import { startTelegramBot } from './telegram/bot.js';
 import { ensureUploadDir } from './middleware/upload.js';
-import { requestLogger, errorHandler } from './middleware/diagnostics.js';
 import { runKnexMigrations } from './db/runKnexMigrations.js';
 import { logger } from './utils/logger.js';
+import { initSentry } from './monitoring/sentry.js';
+initSentry();
 async function waitForPostgresReady() {
     const maxAttempts = 12;
     const delayMs = 2000;
@@ -43,16 +44,19 @@ async function main() {
     startSupplierIntelligenceWorker();
     startStockUpdateWorker();
     startProcurementAutopilotWorker();
+    startRecommendationsWorker();
+    startIikoSyncWorker();
     await supplierScoringQueue.add('daily', { organizationId: '' }, { repeat: { pattern: '0 2 * * *' } }).catch(() => { });
     await procurementAutopilotQueue.add('tick', {}, { repeat: { pattern: '0 */6 * * *' } }).catch(() => { });
     await duplicateScanQueue.add('nightly', {}, { repeat: { pattern: '0 3 * * *' } }).catch(() => { });
+    await recommendationsQueue
+        .add('all-orgs', { organizationId: RECOMMENDATIONS_ALL_ORGS }, { repeat: { pattern: '0 */6 * * *' }, jobId: 'recommendations-all-orgs' })
+        .catch(() => { });
+    await iikoSyncQueue
+        .add('all-orgs', { organizationId: IIKO_SYNC_ALL }, { repeat: { pattern: '0 6 * * *' }, jobId: 'iiko-sync-all-orgs' })
+        .catch(() => { });
     startTelegramBot();
-    const app = express();
-    app.use(cors({ origin: config.frontendUrl, credentials: true }));
-    app.use(express.json());
-    app.use(requestLogger);
-    app.use('/api', routes);
-    app.use(errorHandler);
+    const app = createApp();
     app.listen(config.port, () => {
         logger.info({ port: config.port }, 'PriceRadar API listening');
     });

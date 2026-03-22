@@ -1,6 +1,11 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-require('dotenv').config();
-require('dotenv').config({ path: '.env.test' });
+'use strict';
+
+const path = require('path');
+
+const backendRoot = path.resolve(__dirname, '../..');
+
+require('dotenv').config({ path: path.join(backendRoot, '.env') });
+require('dotenv').config({ path: path.join(backendRoot, '.env.test'), override: true });
 
 process.env.NODE_ENV = 'test';
 process.env.MULTI_TENANT ??= 'true';

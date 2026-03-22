@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { api, type TelegramNotifySettings, type TelegramUser } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useT } from '../i18n/LocaleContext';
@@ -102,6 +103,13 @@ export default function TelegramAdmin() {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+        <strong>Telegram в РФ может быть заблокирован.</strong> Рекомендуем перейти на{' '}
+        <Link to="/settings/notifications" className="underline font-medium">
+          Email, VK Notify или Web Push
+        </Link>
+        .
+      </div>
       <h1 className="text-xl font-semibold text-slate-800">{t('telegram.title')}</h1>
       {status && (
         <p className="text-sm text-slate-600">

@@ -2,6 +2,7 @@ import type { PoolClient } from 'pg';
 import { pool } from '../db/pool.js';
 import type { Product } from '../types/index.js';
 import { insertAudit } from './productAuditLog.js';
+import { refreshProductEmbedding } from '../services/embeddingService.js';
 
 export async function getAllProducts(organizationId?: string): Promise<Product[]> {
   if (organizationId) {
@@ -52,7 +53,9 @@ export async function createProduct(
        RETURNING id, name, normalized_name, is_priority, created_at`,
       [organizationId, name, normalizedName, isPriority]
     );
-    return rows[0];
+    const row = rows[0];
+    void refreshProductEmbedding(row.id, organizationId, name);
+    return row;
   }
   const { rows } = await pool.query(
     `INSERT INTO products (name, normalized_name, is_priority) VALUES ($1, $2, $3)
@@ -212,6 +215,7 @@ export async function normalizeAliasesAndAuditTransaction(
       client
     );
     await client.query('COMMIT');
+    void refreshProductEmbedding(product.id, organizationId, targetDisplayName);
     return { updated };
   } catch (e) {
     await client.query('ROLLBACK');

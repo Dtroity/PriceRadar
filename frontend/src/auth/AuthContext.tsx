@@ -10,7 +10,7 @@ const AuthContext = createContext<AuthState & {
   login: (email: string, password: string) => Promise<void>;
   loginWithOrg?: (organizationSlug: string, email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
-  registerOrg?: (organizationName: string, slug: string, email: string, password: string) => Promise<void>;
+  registerOrg?: (organizationName: string, slug: string, email: string, password: string, industry?: string) => Promise<void>;
   logout: () => Promise<void>;
   setTokens: (access: string, refresh: string) => void;
 }>(null!);
@@ -64,8 +64,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(data.user);
   }, [setTokens]);
 
-  const registerOrg = useCallback(async (organizationName: string, slug: string, email: string, password: string) => {
-    const data = await api.auth.registerOrg(organizationName, slug, email, password);
+  const registerOrg = useCallback(async (organizationName: string, slug: string, email: string, password: string, industry?: string) => {
+    const data = await api.auth.registerOrg(organizationName, slug, email, password, industry);
     setTokens(data.accessToken, data.refreshToken);
     setUser(data.user);
   }, [setTokens]);

@@ -95,18 +95,14 @@ export async function normalizeProducts(req, res) {
         const target = normalizeProductName(targetNormalizedName);
         if (!target)
             return res.status(400).json({ error: 'targetNormalizedName is invalid after normalization' });
-        const updated = await productNameAliasesModel.bulkNormalize(orgId, rawNames, target);
-        const product = await productsModel.findOrCreateProduct(targetNormalizedName, target, false, orgId);
-        await productAuditLog.insertAudit({
-            organizationId: orgId,
-            productId: product.id,
-            action: 'normalize',
-            actorId: req.user?.userId ?? null,
-            meta: { rawNames, targetNormalizedName, updated },
-        });
+        const { updated } = await productsModel.normalizeAliasesAndAuditTransaction(orgId, rawNames, targetNormalizedName, target, req.user?.userId ?? null);
         return res.json({ ok: true, updated });
     }
     catch (err) {
+        const status = err.status;
+        if (status === 400) {
+            return res.status(400).json({ error: err.message });
+        }
         logger.error({ err }, 'Failed to normalize products');
         return res.status(500).json({ error: 'Failed to normalize products' });
     }

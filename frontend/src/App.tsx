@@ -5,6 +5,10 @@ import { useT } from './i18n/LocaleContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Pricing from './pages/Pricing';
+import Admin from './pages/Admin';
+import AdminOrgDetail from './pages/AdminOrgDetail';
+import NotificationsSettings from './pages/NotificationsSettings';
 import Dashboard from './pages/Dashboard';
 import Documents from './pages/Documents';
 import DocumentDetail from './pages/DocumentDetail';
@@ -63,6 +67,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/pricing" element={<Pricing />} />
       <Route
         path="/*"
         element={
@@ -79,6 +84,9 @@ export default function App() {
                 <Route path="/products" element={<Products />} />
                 <Route path="/integrations" element={<Integrations />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/settings/notifications" element={<NotificationsSettings />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/admin/org/:id" element={<AdminOrgDetail />} />
                 <Route path="/telegram" element={<TelegramAdmin />} />
                 <Route path="/procurement" element={<Procurement />} />
                 <Route path="/procurement/recommendations" element={<ProcurementRecommendations />} />

@@ -1,3 +1,5 @@
+/// <reference types="node" resolution-mode="require"/>
+/// <reference types="node" resolution-mode="require"/>
 import { parseExcel } from './excelParser.js';
 import { parseCsv } from './csvParser.js';
 import type { NormalizedRow } from '../types/index.js';

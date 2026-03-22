@@ -1,3 +1,4 @@
+/// <reference path="../../src/types/global.d.ts" />
 import { Queue, Worker } from 'bullmq';
 import { type UploadJobPayload } from './uploadProcessor.js';
 import { type DocumentJobPayload } from './documentProcessor.js';

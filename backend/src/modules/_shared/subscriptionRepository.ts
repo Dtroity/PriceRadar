@@ -1,14 +1,27 @@
 import { pool } from '../../db/pool.js';
+import { routeModuleCandidates } from '../../config/modules.js';
+import * as orgModules from '../../models/organizationModulesModel.js';
 
 const cache = new Map<string, { modules: Set<string>; at: number }>();
-const TTL_MS = 60_000;
+const TTL_MS = 15_000;
 
 export async function organizationHasModule(organizationId: string, moduleKey: string): Promise<boolean> {
+  const candidates = routeModuleCandidates(moduleKey);
+  const cacheKey = `${organizationId}:${[...candidates].sort().join(',')}`;
   const now = Date.now();
-  const cached = cache.get(organizationId);
+  const cached = cache.get(cacheKey);
   if (cached && now - cached.at < TTL_MS) {
-    return cached.modules.has(moduleKey);
+    return cached.modules.has('__ok__');
   }
+
+  const count = await orgModules.countModuleRows(organizationId);
+  if (count > 0) {
+    const ok = await orgModules.isAnyModuleEnabled(organizationId, candidates);
+    cache.set(cacheKey, { modules: new Set(ok ? ['__ok__'] : []), at: now });
+    return ok;
+  }
+
+  // Legacy: no organization_modules rows — fall back to plan_modules / subscriptions
   const { rows } = await pool.query(
     `SELECT pm.module_key
      FROM organization_subscriptions os
@@ -17,20 +30,20 @@ export async function organizationHasModule(organizationId: string, moduleKey: s
     [organizationId]
   );
   if (rows.length === 0) {
-    const enabled = new Set(await allModuleKeys());
-    cache.set(organizationId, { modules: enabled, at: now });
-    return enabled.has(moduleKey);
+    const { rows: all } = await pool.query(`SELECT key FROM modules`);
+    const enabled = new Set(all.map((r: { key: string }) => r.key));
+    const ok = candidates.some((c) => enabled.has(c));
+    cache.set(cacheKey, { modules: new Set(ok ? ['__ok__'] : []), at: now });
+    return ok;
   }
   const modules = new Set(rows.map((r: { module_key: string }) => r.module_key));
-  cache.set(organizationId, { modules, at: now });
-  return modules.has(moduleKey);
-}
-
-async function allModuleKeys(): Promise<string[]> {
-  const { rows } = await pool.query(`SELECT key FROM modules`);
-  return rows.map((r: { key: string }) => r.key);
+  const ok = candidates.some((c) => modules.has(c));
+  cache.set(cacheKey, { modules: new Set(ok ? ['__ok__'] : []), at: now });
+  return ok;
 }
 
 export function invalidateSubscriptionCache(organizationId: string): void {
-  cache.delete(organizationId);
+  for (const k of [...cache.keys()]) {
+    if (k.startsWith(`${organizationId}:`)) cache.delete(k);
+  }
 }
