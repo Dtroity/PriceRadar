@@ -72,5 +72,5 @@ export async function sendTestMessage(organizationId: string): Promise<void> {
   if (!bot) throw new Error('Telegram bot not configured');
   const { telegram_chat_id } = await orgSettings.getTelegramSettings(organizationId);
   if (!telegram_chat_id) throw new Error('telegram_chat_id not set');
-  await bot.sendMessage(telegram_chat_id, '✅ PriceRadar: тестовое сообщение');
+  await bot.sendMessage(telegram_chat_id, '✅ Vizor360: тестовое сообщение');
 }

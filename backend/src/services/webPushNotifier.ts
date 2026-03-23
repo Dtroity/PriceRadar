@@ -39,7 +39,7 @@ function buildPayload(event: NotifyEvent): { title: string; body: string; url: s
       url: '/procurement/orders',
     };
   }
-  return { title: 'PriceRadar', body: 'Уведомление', url: '/' };
+  return { title: 'Vizor360', body: 'Уведомление', url: '/' };
 }
 
 export async function sendWebPushNotification(organizationId: string, event: NotifyEvent): Promise<void> {

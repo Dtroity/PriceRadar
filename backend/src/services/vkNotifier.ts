@@ -30,16 +30,16 @@ export async function sendVkNotification(phone: string, event: NotifyEvent): Pro
 function summarizeForVk(event: NotifyEvent): string | null {
   if (event.type === 'anomaly') {
     const a = event.anomaly;
-    return `PriceRadar: ${a.product_name} — цена ${a.price_before}→${a.price_after}`;
+    return `Vizor360: ${a.product_name} — цена ${a.price_before}→${a.price_after}`;
   }
   if (event.type === 'recommendation_batch') {
-    return `PriceRadar: ${event.lines.length} новых рекомендаций`;
+    return `Vizor360: ${event.lines.length} новых рекомендаций`;
   }
   if (event.type === 'order_status') {
-    return `PriceRadar: заявка ${event.order.title ?? ''} ${event.oldStatus}→${event.newStatus}`;
+    return `Vizor360: заявка ${event.order.title ?? ''} ${event.oldStatus}→${event.newStatus}`;
   }
   if (event.type === 'recommendation') {
-    return `PriceRadar: рекомендация ${event.rec.product_name ?? event.rec.product_id}`;
+    return `Vizor360: рекомендация ${event.rec.product_name ?? event.rec.product_id}`;
   }
   return null;
 }

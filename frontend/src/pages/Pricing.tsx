@@ -8,7 +8,7 @@ export default function Pricing() {
         <LocaleSwitcher />
       </div>
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Тарифы PriceRadar</h1>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">Тарифы Vizor360</h1>
         <p className="text-slate-600 mb-8">Оплата онлайн — позже. Сейчас смена тарифа через администратора платформы.</p>
         <div className="grid md:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">

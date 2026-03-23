@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import LocaleSwitcher from '../components/LocaleSwitcher';
+import { Logo } from '../components/layout/Logo';
 
 const INDUSTRIES = [
   { value: '', label: '— выберите —' },
@@ -50,8 +51,11 @@ export default function Register() {
         <LocaleSwitcher />
       </div>
       <div className="w-full max-w-sm">
+        <div className="mb-4 flex justify-center">
+          <Logo size="md" />
+        </div>
         <h1 className="text-2xl font-semibold text-slate-800 text-center mb-1">
-          {t('app.name')} — {t('auth.register')}
+          Создать аккаунт Vizor360
         </h1>
         <p className="text-sm text-slate-500 text-center mb-6">{t('app.tagline')}</p>
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">

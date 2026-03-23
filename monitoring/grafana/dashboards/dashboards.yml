@@ -1,7 +1,7 @@
 apiVersion: 1
 
 providers:
-  - name: PriceRadar
+  - name: Vizor360
     folder: ''
     type: file
     disableDeletion: false

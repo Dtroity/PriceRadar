@@ -1,7 +1,7 @@
 import * as usersModel from '../models/users.js';
 
 async function seed() {
-  const email = process.env.ADMIN_EMAIL ?? 'admin@priceradar.local';
+  const email = process.env.ADMIN_EMAIL ?? 'admin@vizor360.local';
   const password = process.env.ADMIN_PASSWORD ?? 'admin123';
   const existing = await usersModel.findUserByEmail(email);
   if (existing) {

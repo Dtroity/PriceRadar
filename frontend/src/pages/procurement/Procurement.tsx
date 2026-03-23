@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import type { Supplier } from '../../api/client';
 import {
   acceptRecommendation,
@@ -25,6 +26,7 @@ function statusLabel(t: (k: string) => string, s: string): string {
 
 export default function Procurement() {
   const t = useT();
+  const bp = useBreakpoint();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<ProcurementOrder[]>([]);
   const [recs, setRecs] = useState<ProcurementRecommendation[]>([]);
@@ -209,42 +211,71 @@ export default function Procurement() {
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
           {loading ? (
             <p className="p-6 text-slate-500">{t('common.loading')}</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-slate-50">
-                  <th className="px-3 py-2 text-left">{t('procurement.orderTitleCol')}</th>
-                  <th className="px-3 py-2 text-left">{t('documents.status')}</th>
-                  <th className="px-3 py-2 text-left">{t('procurement.created')}</th>
-                  <th className="px-3 py-2 text-left" />
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr key={o.id} className="border-b border-slate-100">
-                    <td className="px-3 py-2">
-                      <Link className="font-medium text-slate-900 hover:underline" to={`/procurement/orders/${o.id}`}>
-                        {o.title || o.id.slice(0, 8)}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-2">
+          ) : bp === 'mobile' ? (
+            <div className="flex flex-col gap-3 p-3">
+              {orders.map((o) => {
+                const supName =
+                  suppliers.find((s) => s.id === o.supplier_id)?.name ?? t('procurement.supplierUnset');
+                return (
+                  <Link
+                    key={o.id}
+                    to={`/procurement/orders/${o.id}`}
+                    className="block rounded-xl border border-[var(--border)] bg-white p-4 shadow-sm active:bg-[var(--surface-raised)]"
+                  >
+                    <div className="mb-1 flex items-start justify-between gap-2">
+                      <span className="font-medium text-slate-900">
+                        {o.title ?? `Заявка #${o.id.slice(-6)}`}
+                      </span>
                       <OrderStatusBadge status={o.status} label={t(`procurement.status.${o.status}`)} />
-                    </td>
-                    <td className="px-3 py-2 text-slate-600">
+                    </div>
+                    <div className="flex justify-between text-sm text-[var(--text-secondary)]">
+                      <span className="truncate">{supName}</span>
+                    </div>
+                    <div className="mt-1 text-xs text-[var(--text-muted)]">
                       {new Date(o.created_at).toLocaleString()}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <Link
-                        to={`/procurement/orders/${o.id}`}
-                        className="text-slate-600 hover:text-slate-900"
-                      >
-                        →
-                      </Link>
-                    </td>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-sm">
+                <thead>
+                  <tr className="border-b bg-slate-50">
+                    <th className="px-3 py-2 text-left">{t('procurement.orderTitleCol')}</th>
+                    <th className="px-3 py-2 text-left">{t('documents.status')}</th>
+                    <th className="px-3 py-2 text-left">{t('procurement.created')}</th>
+                    <th className="px-3 py-2 text-left" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {orders.map((o) => (
+                    <tr key={o.id} className="h-12 border-b border-slate-100 md:h-14">
+                      <td className="px-3 py-2">
+                        <Link className="font-medium text-slate-900 hover:underline" to={`/procurement/orders/${o.id}`}>
+                          {o.title || o.id.slice(0, 8)}
+                        </Link>
+                      </td>
+                      <td className="px-3 py-2">
+                        <OrderStatusBadge status={o.status} label={t(`procurement.status.${o.status}`)} />
+                      </td>
+                      <td className="px-3 py-2 text-slate-600">
+                        {new Date(o.created_at).toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <Link
+                          to={`/procurement/orders/${o.id}`}
+                          className="table-action-icon inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-slate-600 hover:text-slate-900"
+                        >
+                          →
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           {!loading && orders.length === 0 && (
             <div className="p-8 text-center text-slate-500">{t('procurement.noProcurementOrders')}</div>

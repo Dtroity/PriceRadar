@@ -20,26 +20,26 @@ function buildTelegramStyleText(event: NotifyEvent, cfg: ReturnType<typeof orgNo
     if (a.severity === 'high' && !cfg.anomaly_high) return '';
     if (a.severity === 'medium' && !cfg.anomaly_medium) return '';
     if (a.severity === 'high') {
-      return `🔴 Аномалия цены!\nТовар: ${a.product_name}\nПоставщик: ${a.supplier_name}\nБыло: ${a.price_before} → Стало: ${a.price_after} (${a.change_pct >= 0 ? '+' : ''}${a.change_pct.toFixed(1)}%)\nСерьёзность: ВЫСОКАЯ`;
+      return `🔴 Аномалия цены!\nТовар: ${a.product_name}\nПоставщик: ${a.supplier_name}\nБыло: ${a.price_before} → Стало: ${a.price_after} (${a.change_pct >= 0 ? '+' : ''}${a.change_pct.toFixed(1)}%)\nСерьёзность: ВЫСОКАЯ\n— Vizor360`;
     }
-    return `🟡 Изменение цены\nТовар: ${a.product_name} | ${a.change_pct >= 0 ? '+' : ''}${a.change_pct.toFixed(1)}%`;
+    return `🟡 Изменение цены\nТовар: ${a.product_name} | ${a.change_pct >= 0 ? '+' : ''}${a.change_pct.toFixed(1)}%\n— Vizor360`;
   }
   if (event.type === 'recommendation') {
     if (!cfg.recommendation) return '';
     const r = event.rec;
     const price = r.suggested_price != null ? `${parseFloat(r.suggested_price).toFixed(2)}` : '—';
-    return `💡 Рекомендация закупки\nТовар: ${r.product_name ?? r.product_id}\nПричина: ${reasonRu(r.reason)}\nПредложенная цена: ${price}`;
+    return `💡 Рекомендация закупки\nТовар: ${r.product_name ?? r.product_id}\nПричина: ${reasonRu(r.reason)}\nПредложенная цена: ${price}\n— Vizor360`;
   }
   if (event.type === 'recommendation_batch') {
     if (!cfg.recommendation || event.lines.length === 0) return '';
     let t = `💡 Новые рекомендации (${event.lines.length})\n${event.lines.slice(0, 20).join('\n')}`;
     if (event.lines.length > 20) t += `\n…`;
-    return t;
+    return `${t}\n— Vizor360`;
   }
   if (event.type === 'order_status') {
     if (!cfg.order_status) return '';
     const o = event.order;
-    return `📦 Заявка ${o.title ?? '#'}\nСтатус: ${event.oldStatus} → ${event.newStatus}`;
+    return `📦 Заявка ${o.title ?? '#'}\nСтатус: ${event.oldStatus} → ${event.newStatus}\n— Vizor360`;
   }
   return '';
 }
@@ -97,7 +97,7 @@ export async function dispatchNotifications(organizationId: string, event: Notif
 export async function sendTestNotifications(organizationId: string): Promise<void> {
   await dispatchNotifications(organizationId, {
     type: 'order_status',
-    order: { title: 'Тест PriceRadar', status: 'pending' },
+    order: { title: 'Тест Vizor360', status: 'pending' },
     oldStatus: 'draft',
     newStatus: 'pending',
   });

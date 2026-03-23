@@ -3,23 +3,25 @@ version: '3.8'
 services:
   postgres:
     image: pgvector/pgvector:pg15
+    container_name: vizor360-db
     environment:
-      POSTGRES_USER: priceradar
-      POSTGRES_PASSWORD: priceradar
-      POSTGRES_DB: priceradar
+      POSTGRES_USER: vizor360
+      POSTGRES_PASSWORD: vizor360
+      POSTGRES_DB: vizor360
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - vizor360_db_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U priceradar"]
+      test: ["CMD-SHELL", "pg_isready -U vizor360"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
+    container_name: vizor360-redis
     ports:
       - "6379:6379"
     healthcheck:
@@ -29,13 +31,14 @@ services:
       retries: 5
 
   backend:
+    container_name: vizor360-backend
     build:
       context: .
       dockerfile: backend/Dockerfile
     ports:
       - "3001:3001"
     environment:
-      DATABASE_URL: postgresql://priceradar:priceradar@postgres:5432/priceradar
+      DATABASE_URL: postgresql://vizor360:vizor360@postgres:5432/vizor360
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-in-production}
@@ -58,6 +61,7 @@ services:
         condition: service_healthy
 
   frontend:
+    container_name: vizor360-frontend
     build:
       context: .
       dockerfile: frontend/Dockerfile
@@ -67,6 +71,7 @@ services:
       - backend
 
   prometheus:
+    container_name: vizor360-prometheus
     image: prom/prometheus:latest
     ports:
       - "9090:9090"
@@ -78,19 +83,20 @@ services:
       - backend
 
   grafana:
+    container_name: vizor360-grafana
     image: grafana/grafana:latest
     ports:
       - "3002:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
     volumes:
-      - grafana_data:/var/lib/grafana
+      - vizor360_grafana_data:/var/lib/grafana
       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
       - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
     depends_on:
       - prometheus
 
 volumes:
-  postgres_data:
+  vizor360_db_data:
   uploads_data:
-  grafana_data:
+  vizor360_grafana_data:

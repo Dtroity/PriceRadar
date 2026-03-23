@@ -58,7 +58,7 @@ async function main() {
     startTelegramBot();
     const app = createApp();
     app.listen(config.port, () => {
-        logger.info({ port: config.port }, 'PriceRadar API listening');
+        logger.info({ port: config.port }, 'Vizor360 API listening');
     });
 }
 main().catch((err) => {

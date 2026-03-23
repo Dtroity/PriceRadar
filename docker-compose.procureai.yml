@@ -8,16 +8,16 @@ services:
   postgres:
     image: pgvector/pgvector:pg15
     environment:
-      POSTGRES_USER: procureai
-      POSTGRES_PASSWORD: procureai
-      POSTGRES_DB: procureai
+      POSTGRES_USER: vizor360
+      POSTGRES_PASSWORD: vizor360
+      POSTGRES_DB: vizor360
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - vizor360_db_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U procureai"]
+      test: ["CMD-SHELL", "pg_isready -U vizor360"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -38,13 +38,13 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     environment:
-      DATABASE_URL: postgresql://procureai:procureai@postgres:5432/procureai
+      DATABASE_URL: postgresql://vizor360:vizor360@postgres:5432/vizor360
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me}
       UPLOAD_DIR: /app/uploads
-      FRONTEND_URL: https://procureai.app
+      FRONTEND_URL: https://vizor360.ru
       MULTI_TENANT: "true"
       AI_SERVICE_URL: http://ai-service:8000
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
@@ -89,7 +89,7 @@ services:
       dockerfile: backend/Dockerfile
     command: ["node", "dist/telegram/bot.js"]
     environment:
-      DATABASE_URL: postgresql://procureai:procureai@postgres:5432/procureai
+      DATABASE_URL: postgresql://vizor360:vizor360@postgres:5432/vizor360
       REDIS_HOST: redis
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_BOT_ENABLED: "true"
@@ -111,5 +111,5 @@ services:
       - ai-service
 
 volumes:
-  postgres_data:
+  vizor360_db_data:
   uploads_data:

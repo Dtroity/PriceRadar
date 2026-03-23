@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api, type Product } from '../api/client';
+import { useBreakpoint } from '../hooks/useBreakpoint';
+import { useLocale } from '../i18n/LocaleContext';
 import {
   fetchBestSuppliers,
   fetchPriceHistory,
@@ -15,6 +17,8 @@ import SupplierRankingTable from '../components/analytics/SupplierRankingTable';
 type Tab = 'history' | 'suppliers' | 'summary';
 
 export default function Analytics() {
+  const { t } = useLocale();
+  const bp = useBreakpoint();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = (searchParams.get('tab') as Tab) || 'history';
   const productFromUrl = searchParams.get('product_id') ?? '';
@@ -30,6 +34,7 @@ export default function Analytics() {
   const [suppliersLoading, setSuppliersLoading] = useState(false);
   const [summaryData, setSummaryData] = useState<PriceSummaryResponse | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [productPickerOpen, setProductPickerOpen] = useState(false);
 
   useEffect(() => {
     setProductId(productFromUrl);
@@ -117,16 +122,16 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold text-slate-800">Аналитика цен</h1>
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-slate-500">Период:</span>
+        <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 text-sm scrollbar-thin sm:flex-wrap sm:overflow-visible">
+          <span className="hidden shrink-0 self-center text-slate-500 sm:inline">Период:</span>
           {([30, 90, 180] as const).map((d) => (
             <button
               key={d}
               type="button"
               onClick={() => setPeriodDays(d)}
-              className={`rounded-lg px-3 py-1 ${
+              className={`shrink-0 rounded-full px-4 py-2 sm:rounded-lg ${
                 periodDays === d ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
@@ -160,31 +165,102 @@ export default function Analytics() {
       {tab === 'history' && (
         <div className="space-y-4">
           <div className="flex flex-wrap gap-3 items-center">
-            <label className="text-sm text-slate-600">Товар</label>
-            <select
-              value={productId}
-              onChange={(e) => {
-                const v = e.target.value;
-                setProductId(v);
-                const next = new URLSearchParams(searchParams);
-                if (v) next.set('product_id', v);
-                else next.delete('product_id');
-                next.set('tab', 'history');
-                setSearchParams(next, { replace: true });
-              }}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm min-w-[240px]"
-            >
-              <option value="">— выберите —</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            {bp === 'mobile' ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setProductPickerOpen(true)}
+                  className="min-h-[48px] w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-left text-sm font-medium text-slate-800 shadow-sm"
+                >
+                  {productId
+                    ? products.find((p) => p.id === productId)?.name ?? 'Товар'
+                    : '— выберите товар —'}
+                </button>
+                {productPickerOpen && (
+                  <>
+                    <button
+                      type="button"
+                      className="fixed inset-0 z-[100] bg-black/50"
+                      aria-label="Close"
+                      onClick={() => setProductPickerOpen(false)}
+                    />
+                    <div className="fixed inset-x-0 bottom-0 z-[110] max-h-[70vh] overflow-hidden rounded-t-2xl bg-white shadow-2xl flex flex-col pb-[env(safe-area-inset-bottom)]">
+                      <div className="border-b border-slate-200 px-4 py-3 font-semibold text-slate-900">
+                        {t('analytics.productPickerTitle')}
+                      </div>
+                      <div className="overflow-y-auto p-2">
+                        <button
+                          type="button"
+                          className="w-full rounded-lg px-4 py-3 text-left text-sm text-slate-600 hover:bg-slate-50"
+                          onClick={() => {
+                            setProductId('');
+                            const next = new URLSearchParams(searchParams);
+                            next.delete('product_id');
+                            next.set('tab', 'history');
+                            setSearchParams(next, { replace: true });
+                            setProductPickerOpen(false);
+                          }}
+                        >
+                          — сброс —
+                        </button>
+                        {products.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className="w-full rounded-lg px-4 py-3 text-left text-sm text-slate-900 hover:bg-amber-50"
+                            onClick={() => {
+                              setProductId(p.id);
+                              const next = new URLSearchParams(searchParams);
+                              next.set('product_id', p.id);
+                              next.set('tab', 'history');
+                              setSearchParams(next, { replace: true });
+                              setProductPickerOpen(false);
+                            }}
+                          >
+                            {p.name}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        className="m-3 min-h-[48px] rounded-xl bg-slate-800 py-3 text-sm font-medium text-white"
+                        onClick={() => setProductPickerOpen(false)}
+                      >
+                        {t('analytics.done')}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <label className="text-sm text-slate-600">Товар</label>
+                <select
+                  value={productId}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setProductId(v);
+                    const next = new URLSearchParams(searchParams);
+                    if (v) next.set('product_id', v);
+                    else next.delete('product_id');
+                    next.set('tab', 'history');
+                    setSearchParams(next, { replace: true });
+                  }}
+                  className="min-h-[44px] min-w-[240px] rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                >
+                  <option value="">— выберите —</option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
             {supplierFilter && (
               <button
                 type="button"
-                className="text-sm text-slate-600 underline"
+                className="tap-target-row text-sm text-slate-600 underline"
                 onClick={() => setSupplierFilter(null)}
               >
                 Сбросить фильтр поставщика

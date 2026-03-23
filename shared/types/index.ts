@@ -1,5 +1,5 @@
 /**
- * PriceRadar - Shared types
+ * Vizor360 - Shared types
  */
 
 export type UserRole = 'super_admin' | 'org_admin' | 'manager';

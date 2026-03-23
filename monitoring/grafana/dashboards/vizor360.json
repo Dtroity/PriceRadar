@@ -13,13 +13,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "id": 1,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
-      "targets": [
-        {
-          "expr": "sum(rate(http_requests_total[5m]))",
-          "legendFormat": "RPS",
-          "refId": "A"
-        }
-      ],
+      "targets": [{ "expr": "sum(rate(vizor360_http_requests_total[5m]))", "legendFormat": "RPS", "refId": "A" }],
       "title": "HTTP RPS (5m rate)",
       "type": "timeseries"
     },
@@ -28,13 +22,7 @@
       "fieldConfig": { "defaults": {}, "overrides": [] },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "id": 2,
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
-          "legendFormat": "p95",
-          "refId": "A"
-        }
-      ],
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(vizor360_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p95", "refId": "A" }],
       "title": "HTTP p95 latency (s)",
       "type": "timeseries"
     },
@@ -43,7 +31,7 @@
       "fieldConfig": { "defaults": {}, "overrides": [] },
       "gridPos": { "h": 6, "w": 8, "x": 0, "y": 8 },
       "id": 3,
-      "targets": [{ "expr": "documents_queue_size", "refId": "A" }],
+      "targets": [{ "expr": "vizor360_documents_queue_size", "refId": "A" }],
       "title": "Document queue size",
       "type": "gauge"
     },
@@ -52,13 +40,7 @@
       "fieldConfig": { "defaults": {}, "overrides": [] },
       "gridPos": { "h": 8, "w": 16, "x": 8, "y": 8 },
       "id": 4,
-      "targets": [
-        {
-          "expr": "sum by (status) (rate(documents_processed_total[1h]))",
-          "legendFormat": "{{status}}",
-          "refId": "A"
-        }
-      ],
+      "targets": [{ "expr": "sum by (status) (rate(vizor360_documents_processed_total[1h]))", "legendFormat": "{{status}}", "refId": "A" }],
       "title": "Documents processed (rate by status)",
       "type": "timeseries"
     },
@@ -67,13 +49,7 @@
       "fieldConfig": { "defaults": {}, "overrides": [] },
       "gridPos": { "h": 6, "w": 12, "x": 0, "y": 16 },
       "id": 5,
-      "targets": [
-        {
-          "expr": "increase(anomalies_detected_total[24h])",
-          "legendFormat": "{{severity}}",
-          "refId": "A"
-        }
-      ],
+      "targets": [{ "expr": "increase(vizor360_anomalies_detected_total[24h])", "legendFormat": "{{severity}}", "refId": "A" }],
       "title": "Anomalies detected (24h increase)",
       "type": "bargauge"
     },
@@ -82,9 +58,7 @@
       "fieldConfig": { "defaults": {}, "overrides": [] },
       "gridPos": { "h": 6, "w": 12, "x": 12, "y": 16 },
       "id": 6,
-      "targets": [
-        { "expr": "nodejs_heap_size_used_bytes", "refId": "A" }
-      ],
+      "targets": [{ "expr": "nodejs_heap_size_used_bytes", "refId": "A" }],
       "title": "Node heap used",
       "type": "timeseries"
     }
@@ -92,13 +66,13 @@
   "refresh": "30s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["priceradar"],
+  "tags": ["vizor360"],
   "templating": { "list": [] },
   "time": { "from": "now-6h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
-  "title": "PriceRadar",
-  "uid": "priceradar-main",
+  "title": "Vizor360 Dashboard",
+  "uid": "vizor360-main",
   "version": 1,
   "weekStart": ""
 }

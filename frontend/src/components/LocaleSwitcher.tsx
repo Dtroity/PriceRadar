@@ -13,7 +13,7 @@ export default function LocaleSwitcher() {
           key={l}
           type="button"
           onClick={() => setLocale(l)}
-          className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+          className={`rounded-md px-3 py-2 min-h-[44px] min-w-[44px] text-xs font-medium transition-colors flex items-center justify-center ${
             locale === l
               ? 'bg-white text-slate-800 shadow-sm'
               : 'text-slate-500 hover:text-slate-700'

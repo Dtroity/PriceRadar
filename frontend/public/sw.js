@@ -1,6 +1,6 @@
 /* eslint-disable no-restricted-globals */
 self.addEventListener('push', (event) => {
-  let data = { title: 'PriceRadar', body: '', url: '/' };
+  let data = { title: 'Vizor360', body: '', url: '/' };
   try {
     data = { ...data, ...(event.data ? event.data.json() : {}) };
   } catch {
@@ -9,7 +9,7 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: '/favicon.ico',
+      icon: '/favicon.svg',
       data: { url: data.url || '/' },
     })
   );

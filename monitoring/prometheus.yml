@@ -2,7 +2,7 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'priceradar-backend'
+  - job_name: 'vizor360-backend'
     static_configs:
       - targets: ['backend:3001']
     metrics_path: '/metrics'

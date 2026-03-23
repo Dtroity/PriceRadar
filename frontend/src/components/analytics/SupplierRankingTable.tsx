@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { BestSuppliersResponse } from '../../api/analyticsClient';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 type Col = 'name' | 'avg_price' | 'min_price' | 'delivery_count' | 'price_stability' | 'score';
 
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export default function SupplierRankingTable({ data, loading, onSupplierClick }: Props) {
+  const bp = useBreakpoint();
   const [sortCol, setSortCol] = useState<Col>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -53,6 +55,47 @@ export default function SupplierRankingTable({ data, loading, onSupplierClick }:
     return <div className="rounded-xl border border-slate-200 bg-slate-50 h-48 animate-pulse" />;
   }
 
+  if (bp === 'mobile') {
+    return (
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 bg-slate-50">
+              <th className="px-3 py-2 text-left">Поставщик</th>
+              <th className="px-3 py-2 text-right">Средняя</th>
+              <th className="px-3 py-2 text-right">Рейтинг</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="py-8 text-center text-slate-500">
+                  Нет данных за период
+                </td>
+              </tr>
+            ) : (
+              rows.map((r) => (
+                <tr key={r.supplier.id} className="h-14 border-b border-slate-100">
+                  <td className="px-3 py-2">
+                    <button
+                      type="button"
+                      className="min-h-[44px] text-left text-slate-800 underline-offset-2 hover:underline"
+                      onClick={() => onSupplierClick?.(r.supplier.id)}
+                    >
+                      {r.supplier.name}
+                    </button>
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono">{r.avg_price.toFixed(2)}</td>
+                  <td className={`px-3 py-2 text-right font-semibold ${scoreColor(r.score)}`}>{r.score}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
       <table className="w-full text-sm">
@@ -68,7 +111,7 @@ export default function SupplierRankingTable({ data, loading, onSupplierClick }:
                 ['score', 'Рейтинг'],
               ] as const
             ).map(([key, label]) => (
-              <th key={key} className="text-left py-2 px-3">
+              <th key={key} className="px-3 py-2 text-left">
                 <button
                   type="button"
                   className="font-medium text-slate-700 hover:text-slate-900"
@@ -90,8 +133,8 @@ export default function SupplierRankingTable({ data, loading, onSupplierClick }:
             </tr>
           ) : (
             rows.map((r) => (
-              <tr key={r.supplier.id} className="border-b border-slate-100 hover:bg-slate-50">
-                <td className="py-2 px-3">
+              <tr key={r.supplier.id} className="h-12 border-b border-slate-100 hover:bg-slate-50 md:h-14">
+                <td className="px-3 py-2">
                   <button
                     type="button"
                     className="text-left text-slate-800 underline-offset-2 hover:underline"
@@ -100,19 +143,19 @@ export default function SupplierRankingTable({ data, loading, onSupplierClick }:
                     {r.supplier.name}
                   </button>
                 </td>
-                <td className="py-2 px-3">{r.avg_price.toFixed(2)}</td>
-                <td className="py-2 px-3">{r.min_price.toFixed(2)}</td>
-                <td className="py-2 px-3">{r.delivery_count}</td>
-                <td className="py-2 px-3 w-40">
-                  <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
+                <td className="px-3 py-2">{r.avg_price.toFixed(2)}</td>
+                <td className="px-3 py-2">{r.min_price.toFixed(2)}</td>
+                <td className="px-3 py-2">{r.delivery_count}</td>
+                <td className="w-40 px-3 py-2">
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-200">
                     <div
-                      className="h-full bg-emerald-500 rounded-full"
+                      className="h-full rounded-full bg-emerald-500"
                       style={{ width: `${Math.round(r.price_stability * 100)}%` }}
                     />
                   </div>
                   <span className="text-xs text-slate-500">{(r.price_stability * 100).toFixed(0)}%</span>
                 </td>
-                <td className={`py-2 px-3 font-semibold ${scoreColor(r.score)}`}>{r.score}</td>
+                <td className={`px-3 py-2 font-semibold ${scoreColor(r.score)}`}>{r.score}</td>
               </tr>
             ))
           )}

@@ -1,4 +1,4 @@
-# PriceRadar
+# Vizor360
 
 Production-ready MVP системы мониторинга цен поставщиков для ресторанного бизнеса. Анализ прайс-листов, сравнение цен, уведомления в Telegram.
 
@@ -27,8 +27,8 @@ cp .env.example .env
 Убедитесь, что запущены PostgreSQL и Redis (или используйте Docker только для них):
 
 ```bash
-docker run -d --name priceradar-pg -e POSTGRES_USER=priceradar -e POSTGRES_PASSWORD=priceradar -e POSTGRES_DB=priceradar -p 5432:5432 postgres:15-alpine
-docker run -d --name priceradar-redis -p 6379:6379 redis:7-alpine
+docker run -d --name vizor360-pg -e POSTGRES_USER=vizor360 -e POSTGRES_PASSWORD=vizor360 -e POSTGRES_DB=vizor360 -p 5432:5432 pgvector/pgvector:pg15
+docker run -d --name vizor360-redis -p 6379:6379 redis:7-alpine
 ```
 
 ### 3. Backend
@@ -41,7 +41,7 @@ npm run db:seed
 npm run dev
 ```
 
-По умолчанию создаётся пользователь `admin@priceradar.local` / `admin123`.
+По умолчанию создаётся пользователь `admin@vizor360.local` / `admin123`.
 
 ### 4. Frontend
 
@@ -73,7 +73,7 @@ docker compose up -d
 docker compose exec backend node dist/db/migrate.js  # если миграции вынесены в dist
 ```
 
-Миграции при первом запуске лучше выполнить локально, указав `DATABASE_URL=postgresql://priceradar:priceradar@localhost:5432/priceradar`.
+Миграции при первом запуске лучше выполнить локально, указав `DATABASE_URL=postgresql://vizor360:vizor360@localhost:5432/vizor360`.
 
 ## Функции MVP
 
@@ -97,7 +97,7 @@ docker compose exec backend node dist/db/migrate.js  # если миграции
 ## Структура
 
 ```
-/priceradar
+/vizor360
   /backend    — Express API, парсеры, воркеры, Telegram-бот
   /frontend   — React SPA
   /shared     — общие типы
@@ -209,7 +209,7 @@ Nginx: порты 80/443, проксирование на frontend, backend (/ap
 - **Auth (multi-tenant):**  
   `POST /api/auth/register-org` (organizationName, slug, email, password)  
   `POST /api/auth/login-org` (email, password, organizationSlug)
-- Остальные эндпоинты как в PriceRadar; в мульти-тенантном режиме данные изолированы по `organization_id` (из JWT).
+- Остальные эндпоинты как в Vizor360; в мульти-тенантном режиме данные изолированы по `organization_id` (из JWT).
 
 ## Разделы Web
 

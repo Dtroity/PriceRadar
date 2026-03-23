@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api, type PriceChange, type Supplier } from '../api/client';
 import { useT } from '../i18n/LocaleContext';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 import UploadZone from '../components/UploadZone';
 
 export default function Dashboard() {
   const t = useT();
+  const bp = useBreakpoint();
   const [changes, setChanges] = useState<PriceChange[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,20 +54,20 @@ export default function Dashboard() {
 
       <UploadZone onUpload={load} />
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <p className="text-sm text-slate-500">{t('dashboard.priorityChanges')}</p>
-          <p className="text-2xl font-semibold text-amber-600">{priorityChanges.length}</p>
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-3 md:p-4">
+          <p className="text-xs text-slate-500 md:text-sm">{t('dashboard.priorityChanges')}</p>
+          <p className="text-xl font-semibold text-amber-600 md:text-2xl">{priorityChanges.length}</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <p className="text-sm text-slate-500">{t('dashboard.largestIncrease')}</p>
-          <p className="text-2xl font-semibold text-red-600">
+        <div className="rounded-xl border border-slate-200 bg-white p-3 md:p-4">
+          <p className="text-xs text-slate-500 md:text-sm">{t('dashboard.largestIncrease')}</p>
+          <p className="text-xl font-semibold text-red-600 md:text-2xl">
             {increases[0] ? `+${increases[0].change_percent.toFixed(1)}%` : '—'}
           </p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <p className="text-sm text-slate-500">{t('dashboard.largestDecrease')}</p>
-          <p className="text-2xl font-semibold text-emerald-600">
+        <div className="col-span-2 rounded-xl border border-slate-200 bg-white p-3 md:col-span-1 md:p-4">
+          <p className="text-xs text-slate-500 md:text-sm">{t('dashboard.largestDecrease')}</p>
+          <p className="text-xl font-semibold text-emerald-600 md:text-2xl">
             {decreases[0] ? `${decreases[0].change_percent.toFixed(1)}%` : '—'}
           </p>
         </div>
@@ -107,51 +109,66 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="text-left py-3 px-4 font-medium text-slate-700">{t('dashboard.product')}</th>
-                <th className="text-left py-3 px-4 font-medium text-slate-700">{t('dashboard.supplier')}</th>
-                <th className="text-right py-3 px-4 font-medium text-slate-700">{t('dashboard.old')}</th>
-                <th className="text-right py-3 px-4 font-medium text-slate-700">{t('dashboard.new')}</th>
-                <th className="text-right py-3 px-4 font-medium text-slate-700">{t('dashboard.changePercent')}</th>
-                <th className="text-left py-3 px-4 font-medium text-slate-700">{t('dashboard.date')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-500">
-                    {t('dashboard.loading')}
-                  </td>
-                </tr>
-              ) : changes.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-500">
-                    {t('dashboard.noPriceChanges')}
-                  </td>
-                </tr>
-              ) : (
-                changes.map((c) => (
-                  <tr
-                    key={c.id}
-                    className={`border-b border-slate-100 ${
-                      c.is_priority ? 'bg-amber-50/50' : ''
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        {loading ? (
+          <div className="py-8 text-center text-slate-500">{t('dashboard.loading')}</div>
+        ) : changes.length === 0 ? (
+          <div className="py-8 text-center text-slate-500">{t('dashboard.noPriceChanges')}</div>
+        ) : bp === 'mobile' ? (
+          <div className="flex flex-col gap-2 p-3">
+            {changes.map((c) => (
+              <div
+                key={c.id}
+                className={`rounded-xl border border-[var(--border)] p-3 ${c.is_priority ? 'bg-amber-50/40' : ''}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-medium text-slate-900">{c.product_name}</p>
+                  <span
+                    className={`shrink-0 text-lg font-bold ${
+                      c.change_percent > 0 ? 'text-red-600' : c.change_percent < 0 ? 'text-emerald-600' : 'text-slate-500'
                     }`}
                   >
-                    <td className="py-3 px-4">
+                    {c.change_percent > 0 ? '+' : ''}
+                    {c.change_percent.toFixed(1)}%
+                  </span>
+                </div>
+                <p className="text-sm text-[var(--text-secondary)]">{c.supplier_name}</p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  {c.old_price} → {c.new_price} · {new Date(c.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="px-4 py-3 text-left font-medium text-slate-700">{t('dashboard.product')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-slate-700">{t('dashboard.supplier')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-slate-700">{t('dashboard.old')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-slate-700">{t('dashboard.new')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-slate-700">{t('dashboard.changePercent')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-slate-700">{t('dashboard.date')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {changes.map((c) => (
+                  <tr
+                    key={c.id}
+                    className={`h-12 border-b border-slate-100 md:h-14 ${c.is_priority ? 'bg-amber-50/50' : ''}`}
+                  >
+                    <td className="px-4 py-3">
                       <span className="font-medium text-slate-800">{c.product_name}</span>
                       {c.is_priority && (
-                        <span className="ml-2 text-amber-600 text-xs">{t('dashboard.priority')}</span>
+                        <span className="ml-2 text-xs text-amber-600">{t('dashboard.priority')}</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-slate-600">{c.supplier_name}</td>
-                    <td className="py-3 px-4 text-right text-slate-600">{c.old_price}</td>
-                    <td className="py-3 px-4 text-right text-slate-800">{c.new_price}</td>
+                    <td className="px-4 py-3 text-slate-600">{c.supplier_name}</td>
+                    <td className="px-4 py-3 text-right text-slate-600">{c.old_price}</td>
+                    <td className="px-4 py-3 text-right text-slate-800">{c.new_price}</td>
                     <td
-                      className={`py-3 px-4 text-right font-medium ${
+                      className={`px-4 py-3 text-right font-medium ${
                         c.change_percent > 0
                           ? 'text-red-600'
                           : c.change_percent < 0
@@ -162,15 +179,15 @@ export default function Dashboard() {
                       {c.change_percent > 0 ? '+' : ''}
                       {c.change_percent.toFixed(1)}%
                     </td>
-                    <td className="py-3 px-4 text-slate-500">
+                    <td className="px-4 py-3 text-slate-500">
                       {new Date(c.created_at).toLocaleDateString()}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-# ProcureAI modular architecture (Phase 3.2)
+# Vizor360 modular architecture (Phase 3.2)
 
 ## Layout
 

@@ -1,13 +1,23 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import LocaleSwitcher from './LocaleSwitcher';
-import AnomalyBadge from './analytics/AnomalyBadge';
+import BottomNav from './layout/BottomNav';
+import Sidebar from './layout/Sidebar';
+import { IconMenu } from './layout/NavIcons';
+import { Logo } from './layout/Logo';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const { t } = useLocale();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const [tabletMenuOpen, setTabletMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setTabletMenuOpen(false);
+  }, [pathname]);
 
   const handleLogout = async () => {
     await logout();
@@ -15,54 +25,52 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="text-lg font-semibold text-slate-800">
-          {t('app.name')}
-        </Link>
-        <nav className="flex items-center gap-3 text-sm">
-          <Link to="/" className="text-slate-600 hover:text-slate-900">{t('nav.dashboard')}</Link>
-          <Link to="/documents" className="text-slate-600 hover:text-slate-900">{t('nav.scan')}</Link>
-          <Link to="/analytics" className="text-slate-600 hover:text-slate-900">{t('nav.analytics')}</Link>
-          <AnomalyBadge />
-          <Link to="/prices" className="text-slate-600 hover:text-slate-900">{t('nav.prices')}</Link>
-          <Link to="/forecast" className="text-slate-600 hover:text-slate-900">{t('nav.forecast')}</Link>
-          <Link to="/foodcost" className="text-slate-600 hover:text-slate-900">{t('nav.foodcost')}</Link>
-          <Link to="/suppliers" className="text-slate-600 hover:text-slate-900">{t('nav.suppliers')}</Link>
-          <Link to="/procurement" className="text-slate-600 hover:text-slate-900">{t('nav.procurement')}</Link>
-          <Link to="/integrations" className="text-slate-600 hover:text-slate-900">{t('nav.integrations')}</Link>
-          {(user?.role === 'super_admin' || user?.role === 'org_admin') && (
-            <Link to="/telegram" className="text-slate-600 hover:text-slate-900">{t('nav.telegram')}</Link>
-          )}
-          <Link to="/settings" className="text-slate-600 hover:text-slate-900">{t('nav.settings')}</Link>
-          <Link to="/settings/notifications" className="text-slate-600 hover:text-slate-900">
-            Уведомления
-          </Link>
-          {user?.role === 'super_admin' && (
-            <Link to="/admin" className="text-slate-600 hover:text-slate-900 font-medium">
-              Админ
-            </Link>
-          )}
-        </nav>
-        <div className="flex items-center gap-4">
-          <LocaleSwitcher />
-          <span className="text-sm text-slate-500">{user?.email}</span>
-          <span className="text-xs text-slate-400 uppercase">{user?.role}</span>
+    <div className="flex min-h-screen bg-slate-50">
+      <Sidebar
+        tabletOverlayOpen={tabletMenuOpen}
+        onCloseTabletOverlay={() => setTabletMenuOpen(false)}
+      />
+
+      <div className="flex flex-1 flex-col min-w-0 md:pl-16 lg:pl-60">
+        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-[var(--border)] bg-white/95 px-3 backdrop-blur-sm md:px-4">
           <button
             type="button"
-            onClick={handleLogout}
-            className="text-sm text-slate-600 hover:text-slate-900"
+            className="hidden min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 md:flex lg:hidden"
+            aria-label="Open menu"
+            onClick={() => setTabletMenuOpen(true)}
           >
-            {t('nav.logout')}
+            <IconMenu />
           </button>
-        </div>
-      </header>
-      <main className="flex-1 p-4 md:p-6">{children}</main>
-      <footer className="py-3 px-4 border-t border-slate-100 text-center">
-        <p className="text-xs text-slate-400/80">
-          {t('app.poweredBy')}
-        </p>
-      </footer>
+
+          <Link to="/" className="md:hidden">
+            <Logo size="sm" />
+          </Link>
+
+          <div className="ml-auto flex items-center gap-1 sm:gap-2">
+            <LocaleSwitcher />
+            <span className="hidden max-w-[140px] truncate text-xs text-slate-500 sm:inline md:max-w-[200px]">
+              {user?.email}
+            </span>
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              className="tap-target-row rounded-lg text-sm text-slate-600 hover:bg-slate-50"
+            >
+              {t('nav.logout')}
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto px-4 py-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:px-6 md:pb-6 lg:py-6">
+          {children}
+        </main>
+
+        <footer className="hidden border-t border-slate-100 py-3 text-center md:block">
+          <p className="text-xs text-slate-400/80">{t('app.poweredBy')}</p>
+        </footer>
+      </div>
+
+      <BottomNav />
     </div>
   );
 }

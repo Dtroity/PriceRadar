@@ -58,16 +58,36 @@ function buildEmail(event: NotifyEvent): { subject: string; html: string } | nul
   return null;
 }
 
+function wrapEmail(content: string): string {
+  const emailHeader = `
+<div style="background:#0F0F1A;padding:24px 32px;border-radius:12px 12px 0 0">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="width:32px;height:32px;background:#4F46E5;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff">⊕</div>
+    <span style="color:#fff;font-weight:600;font-size:18px;letter-spacing:-0.3px">Vizor<span style="color:#818CF8">360</span></span>
+  </div>
+</div>`;
+  const emailFooter = `
+<div style="padding:24px 32px;border-top:1px solid #E4E4E7;text-align:center;color:#A1A1AA;font-size:12px">
+  <p>Vizor360 — система контроля закупок</p>
+  <p style="margin-top:4px">
+    <a href="https://vizor360.ru" style="color:#4F46E5">vizor360.ru</a>
+    &nbsp;·&nbsp;
+    <a href="https://vizor360.ru/unsubscribe" style="color:#A1A1AA">Отписаться</a>
+  </p>
+</div>`;
+  return `<div style="max-width:680px;margin:0 auto;background:#fff;border:1px solid #E4E4E7;border-radius:12px;overflow:hidden">${emailHeader}<div style="padding:24px 32px">${content}</div>${emailFooter}</div>`;
+}
+
 export async function sendEmailNotification(to: string, event: NotifyEvent): Promise<void> {
   const t = getTransport();
   if (!t) return;
   const body = buildEmail(event);
   if (!body) return;
-  const from = process.env.SMTP_FROM ?? `PriceRadar <${process.env.SMTP_USER}>`;
+  const from = process.env.SMTP_FROM ?? 'Vizor360 <noreply@vizor360.ru>';
   await t.sendMail({
     from,
     to,
-    subject: body.subject,
-    html: body.html,
+    subject: `Vizor360: ${body.subject}`,
+    html: wrapEmail(body.html),
   });
 }
