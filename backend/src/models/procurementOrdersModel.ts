@@ -31,6 +31,7 @@ export interface ListFilters {
   dateFrom?: Date;
   dateTo?: Date;
   supplierId?: string;
+  createdBy?: string;
 }
 
 export async function listOrders(
@@ -50,6 +51,11 @@ export async function listOrders(
     i++;
     cond.push(`supplier_id = $${i}::uuid`);
     params.push(filters.supplierId);
+  }
+  if (filters.createdBy) {
+    i++;
+    cond.push(`created_by = $${i}::uuid`);
+    params.push(filters.createdBy);
   }
   if (filters.dateFrom) {
     i++;

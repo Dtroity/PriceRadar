@@ -5,3 +5,13 @@ dist/
 .env.test
 keys/*.json
 !keys/README.md
+
+# AZbot backups — персональные данные, не коммитить
+AZbot/*.sql
+AZbot/*.dump
+AZbot/*.gz
+AZBot/*.sql
+AZBot/*.dump
+AZBot/*.gz
+backup_*.sql
+*.sql.gz

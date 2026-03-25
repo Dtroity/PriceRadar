@@ -5,14 +5,17 @@ import { cn } from '../../lib/cn';
 import { IconBarChart, IconCart, IconFileText, IconHome, IconMenu } from './NavIcons';
 import MoreMenuDrawer from './MoreMenuDrawer';
 import { listRecommendations } from '../../api/procurementClient';
+import { useAuth } from '../../auth/AuthContext';
 
 export default function BottomNav() {
   const { t } = useLocale();
   const location = useLocation();
+  const { user } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
   const [recBadge, setRecBadge] = useState(0);
 
   useEffect(() => {
+    if (user?.role === 'employee') return;
     let cancelled = false;
     listRecommendations()
       .then((r) => {
@@ -31,6 +34,23 @@ export default function BottomNav() {
       'flex flex-1 flex-col items-center justify-center gap-0.5 min-h-[52px] py-1 text-[11px] font-medium text-slate-600',
       isActive && 'text-amber-900'
     );
+
+  if (user?.role === 'employee') {
+    return (
+      <nav
+        className={cn(
+          'fixed bottom-0 left-0 right-0 z-50 flex border-t border-[var(--border)] bg-white/95 backdrop-blur-sm',
+          'pb-[env(safe-area-inset-bottom)] md:hidden'
+        )}
+        aria-label="Employee"
+      >
+        <NavLink to="/employee" className={itemClass} end>
+          <IconCart />
+          <span>Заказ</span>
+        </NavLink>
+      </nav>
+    );
+  }
 
   return (
     <>

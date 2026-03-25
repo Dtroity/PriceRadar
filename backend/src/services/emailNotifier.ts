@@ -83,11 +83,65 @@ export async function sendEmailNotification(to: string, event: NotifyEvent): Pro
   if (!t) return;
   const body = buildEmail(event);
   if (!body) return;
-  const from = process.env.SMTP_FROM ?? 'Vizor360 <noreply@vizor360.ru>';
+  const from = process.env.SMTP_FROM ?? 'Vizor360 <info@vizor360.ru>';
   await t.sendMail({
     from,
     to,
     subject: `Vizor360: ${body.subject}`,
     html: wrapEmail(body.html),
+  });
+}
+
+export async function sendSupplierOrderEmail(params: {
+  to: string;
+  contactName: string;
+  restaurantName: string;
+  items: Array<{ product_name: string; quantity: number | string; unit: string | null }>;
+  orderLink: string;
+  expiresAt: Date | string;
+}): Promise<void> {
+  const t = getTransport();
+  if (!t) return;
+
+  const rows = params.items
+    .map((i) => {
+      const qty = typeof i.quantity === 'string' ? i.quantity : String(i.quantity);
+      const unit = i.unit ? ` ${i.unit}` : '';
+      return `<tr>
+        <td style="padding:8px;border-bottom:1px solid #eee">${i.product_name}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;font-family:monospace;text-align:right">${qty}${unit}</td>
+      </tr>`;
+    })
+    .join('');
+
+  const exp = typeof params.expiresAt === 'string' ? new Date(params.expiresAt) : params.expiresAt;
+  const expRu = Number.isFinite(exp.getTime()) ? exp.toLocaleDateString('ru-RU') : '';
+  const content = `
+    <p>Здравствуйте, <b>${params.contactName}</b>!</p>
+    <p><b>${params.restaurantName}</b> разместил заказ:</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr style="background:#f4f4f5">
+        <th style="padding:8px;text-align:left">Товар</th>
+        <th style="padding:8px;text-align:right">Количество</th>
+      </tr>
+      ${rows}
+    </table>
+    ${
+      expRu
+        ? `<p style="color:#6b7280;font-size:13px">Ссылка действует до ${expRu}</p>`
+        : ''
+    }
+    <a href="${params.orderLink}"
+      style="display:inline-block;background:#4F46E5;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:500;margin-top:8px">
+      Открыть заказ
+    </a>
+  `;
+
+  const from = process.env.SMTP_FROM ?? 'Vizor360 <info@vizor360.ru>';
+  await t.sendMail({
+    from,
+    to: params.to,
+    subject: `Новый заказ от ${params.restaurantName}`,
+    html: wrapEmail(content),
   });
 }

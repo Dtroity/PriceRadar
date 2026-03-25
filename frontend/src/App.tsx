@@ -30,6 +30,8 @@ import StockForecast from './pages/stock/StockForecast';
 import AutopilotRecommendations from './pages/stock/AutopilotRecommendations';
 import Analytics from './pages/Analytics';
 import AnomaliesPage from './pages/analytics/Anomalies';
+import PublicOrderPage from './pages/public/OrderPage';
+import EmployeePage from './pages/Employee';
 
 function ErrorFallback() {
   const t = useT();
@@ -68,6 +70,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/pricing" element={<Pricing />} />
+      <Route path="/order/:token" element={<PublicOrderPage />} />
       <Route
         path="/*"
         element={
@@ -75,6 +78,7 @@ export default function App() {
             <Layout>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/employee" element={<EmployeePage />} />
                 <Route path="/documents" element={<Documents />} />
                 <Route path="/documents/:id" element={<DocumentDetail />} />
                 <Route path="/prices" element={<Dashboard />} />

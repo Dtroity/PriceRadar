@@ -5,6 +5,7 @@ import * as recModel from '../models/procurementRecommendationsModel.js';
 import { canTransition, type ProcurementOrderStatus } from '../procurement/orderStatus.js';
 import { generateRecommendations } from '../services/recommendationEngine.js';
 import { notify } from '../services/telegramNotifier.js';
+import { dispatchOrder } from '../services/orderDispatcher.js';
 import { logger } from '../utils/logger.js';
 
 function requireOrg(req: AuthRequest, res: Response): string | null {
@@ -32,11 +33,13 @@ export async function listOrders(req: AuthRequest, res: Response) {
   const supplier_id = req.query.supplier_id as string | undefined;
   const date_from = req.query.date_from ? new Date(String(req.query.date_from)) : undefined;
   const date_to = req.query.date_to ? new Date(String(req.query.date_to)) : undefined;
+  const createdBy = req.user?.role === 'employee' ? (req.user?.userId ?? null) : null;
   const rows = await ordersModel.listOrders(orgId, {
     status,
     supplierId: supplier_id,
     dateFrom: date_from,
     dateTo: date_to,
+    createdBy: createdBy ?? undefined,
   });
   return res.json({ orders: rows });
 }
@@ -84,6 +87,9 @@ export async function getOrder(req: AuthRequest, res: Response) {
   if (!orgId) return;
   const order = await ordersModel.getOrder(req.params.id, orgId);
   if (!order) return res.status(404).json({ error: 'Not found' });
+  if (req.user?.role === 'employee' && order.created_by !== req.user.userId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
   const items = await ordersModel.getOrderItems(order.id);
   const total = await ordersModel.orderTotalSum(order.id);
   return res.json({ ...order, items, total_sum: total });
@@ -130,6 +136,12 @@ export async function patchOrderStatus(req: AuthRequest, res: Response) {
     oldStatus,
     newStatus: status,
   }).catch(() => {});
+
+  if (status === 'approved') {
+    dispatchOrder(req.params.id, orgId).catch((err) =>
+      logger.error({ err, orderId: req.params.id }, 'Dispatch failed')
+    );
+  }
   return res.json(row);
 }
 

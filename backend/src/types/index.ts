@@ -1,7 +1,7 @@
 /**
  * Proviator / Restaurant Procurement AI Platform - Backend types
  */
-export type UserRole = 'super_admin' | 'org_admin' | 'manager';
+export type UserRole = 'super_admin' | 'org_admin' | 'manager' | 'employee' | 'supplier';
 
 export interface Organization {
   id: string;

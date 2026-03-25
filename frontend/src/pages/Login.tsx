@@ -20,12 +20,14 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
+      let u: { role?: string } | null = null;
       if (organizationSlug.trim()) {
-        await loginWithOrg?.(organizationSlug.trim(), email, password);
+        u = (await loginWithOrg?.(organizationSlug.trim(), email, password)) ?? null;
       } else {
-        await login(email, password);
+        u = await login(email, password);
       }
-      navigate('/');
+      if (u?.role === 'employee') navigate('/employee');
+      else navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : t('auth.loginFailed'));
     } finally {

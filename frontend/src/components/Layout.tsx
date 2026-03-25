@@ -14,6 +14,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [tabletMenuOpen, setTabletMenuOpen] = useState(false);
+  const isEmployee = user?.role === 'employee';
 
   useEffect(() => {
     setTabletMenuOpen(false);
@@ -26,12 +27,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <Sidebar
-        tabletOverlayOpen={tabletMenuOpen}
-        onCloseTabletOverlay={() => setTabletMenuOpen(false)}
-      />
+      {!isEmployee && (
+        <Sidebar
+          tabletOverlayOpen={tabletMenuOpen}
+          onCloseTabletOverlay={() => setTabletMenuOpen(false)}
+        />
+      )}
 
-      <div className="flex flex-1 flex-col min-w-0 md:pl-16 lg:pl-60">
+      <div className={isEmployee ? 'flex flex-1 flex-col min-w-0' : 'flex flex-1 flex-col min-w-0 md:pl-16 lg:pl-60'}>
         <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-[var(--border)] bg-white/95 px-3 backdrop-blur-sm md:px-4">
           <button
             type="button"
@@ -61,7 +64,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 py-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:px-6 md:pb-6 lg:py-6">
+        <main className={isEmployee ? 'flex-1 overflow-y-auto p-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))]' : 'flex-1 overflow-y-auto px-4 py-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:px-6 md:pb-6 lg:py-6'}>
           {children}
         </main>
 

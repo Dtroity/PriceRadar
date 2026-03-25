@@ -15,6 +15,7 @@
     "db:migrate:phase32": "tsx src/db/migrate-phase32.ts",
     "db:migrate:phase34": "tsx src/db/migrate-phase34.ts",
     "db:seed": "tsx src/db/seed.ts",
+    "import:azbot": "tsx scripts/importAzbot.ts",
     "test:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --config jest.unit.cjs --runInBand",
     "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.cjs --runInBand",
     "test:all": "npm run test:unit && npm run test:integration"

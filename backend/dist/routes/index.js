@@ -18,6 +18,7 @@ import * as procurementController from '../controllers/procurementController.js'
 import * as iikoIntegrationController from '../controllers/iikoIntegrationController.js';
 import * as adminController from '../controllers/adminController.js';
 import * as notificationsController from '../controllers/notificationsController.js';
+import * as publicOrderController from '../controllers/publicOrderController.js';
 import { sentryUserMiddleware } from '../middleware/sentryUserMiddleware.js';
 import { uploadMiddleware, ensureUploadDir } from '../middleware/upload.js';
 import { mountModuleRoutes } from '../modules/registry.js';
@@ -33,7 +34,7 @@ const router = Router();
 const registerSchema = z.object({
     email: z.string().email(),
     password: z.string().min(6),
-    role: z.enum(['super_admin', 'org_admin', 'manager']).optional(),
+    role: z.enum(['super_admin', 'org_admin', 'manager', 'employee', 'supplier']).optional(),
 });
 const loginSchema = z.object({
     email: z.string().email(),
@@ -171,9 +172,32 @@ router.post('/auth/login', validateBody(loginSchema), authController.login);
 router.post('/auth/register-org', validateBody(registerOrgSchema), authController.registerOrg);
 router.post('/auth/login-org', validateBody(loginOrgSchema), authController.loginWithOrg);
 router.post('/auth/refresh', validateBody(refreshSchema), authController.refresh);
+// Supplier portal (public; no auth)
+router.get('/public/order/:token', publicOrderController.getOrder);
+router.post('/public/order/:token/accept', publicOrderController.acceptOrder);
+router.post('/public/order/:token/reject', publicOrderController.rejectOrder);
+router.get('/public/order/:token/messages', publicOrderController.getMessages);
+router.post('/public/order/:token/messages', publicOrderController.sendMessage);
 // Protected
 router.use(authMiddleware);
 router.use(sentryUserMiddleware);
+// Employee is a restricted role (restaurant staff): allow only products + own procurement create/list.
+router.use((req, res, next) => {
+    const r = req.user?.role;
+    if (r !== 'employee')
+        return next();
+    const method = req.method.toUpperCase();
+    const p = req.path; // path without "/api" prefix (router mounted at /api)
+    const ok = (method === 'GET' && p === '/auth/me') ||
+        (method === 'POST' && p === '/auth/logout') ||
+        (method === 'GET' && p === '/products') ||
+        (method === 'GET' && p === '/procurement/orders') ||
+        (method === 'POST' && p === '/procurement/orders') ||
+        (method === 'GET' && /^\/procurement\/orders\/[^/]+$/.test(p));
+    if (!ok)
+        return res.status(403).json({ error: 'Forbidden' });
+    return next();
+});
 router.post('/auth/logout', authController.logout);
 router.get('/auth/me', authController.me);
 router.get('/debug/routes', requireRole('super_admin'), (_req, res) => {
@@ -205,18 +229,19 @@ router.post('/products/merge', requireRole(['super_admin', 'org_admin']), valida
 router.get('/products/:id/history', productsController.getProductHistory);
 router.patch('/products/:id/priority', productsController.setPriority);
 // Price analytics (org context required)
-router.get('/analytics/prices/history', analyticsController.priceHistory);
-router.get('/analytics/prices/forecast', analyticsController.priceForecast);
-router.get('/analytics/prices/best-suppliers', analyticsController.bestSuppliers);
-router.get('/analytics/prices/summary', analyticsController.priceSummary);
-router.get('/analytics/anomalies', analyticsController.listAnomalies);
-router.get('/analytics/anomalies/unread-count', analyticsController.unreadAnomaliesCount);
-router.patch('/analytics/anomalies/:id/acknowledge', analyticsController.acknowledgeAnomaly);
+router.get('/analytics/prices/history', requireRole(['super_admin', 'org_admin', 'manager']), analyticsController.priceHistory);
+router.get('/analytics/prices/forecast', requireRole(['super_admin', 'org_admin', 'manager']), analyticsController.priceForecast);
+router.get('/analytics/prices/best-suppliers', requireRole(['super_admin', 'org_admin', 'manager']), analyticsController.bestSuppliers);
+router.get('/analytics/prices/summary', requireRole(['super_admin', 'org_admin', 'manager']), analyticsController.priceSummary);
+router.get('/analytics/anomalies', requireRole(['super_admin', 'org_admin', 'manager']), analyticsController.listAnomalies);
+router.get('/analytics/anomalies/unread-count', requireRole(['super_admin', 'org_admin', 'manager']), analyticsController.unreadAnomaliesCount);
+router.patch('/analytics/anomalies/:id/acknowledge', requireRole(['super_admin', 'org_admin', 'manager']), analyticsController.acknowledgeAnomaly);
 // Procurement (заявки и рекомендации закупок)
 const procurementRoles = ['super_admin', 'org_admin', 'manager'];
-router.get('/procurement/orders', requireRole(procurementRoles), procurementController.listOrders);
-router.post('/procurement/orders', requireRole(procurementRoles), validateBody(CreateOrderSchema), procurementController.createOrder);
-router.get('/procurement/orders/:id', requireRole(procurementRoles), procurementController.getOrder);
+const procurementEmployeeRoles = ['super_admin', 'org_admin', 'manager', 'employee'];
+router.get('/procurement/orders', requireRole(procurementEmployeeRoles), procurementController.listOrders);
+router.post('/procurement/orders', requireRole(procurementEmployeeRoles), validateBody(CreateOrderSchema), procurementController.createOrder);
+router.get('/procurement/orders/:id', requireRole(procurementEmployeeRoles), procurementController.getOrder);
 router.patch('/procurement/orders/:id', requireRole(procurementRoles), validateBody(PatchOrderHeaderSchema), procurementController.patchOrder);
 router.patch('/procurement/orders/:id/status', requireRole(procurementRoles), validateBody(UpdateOrderStatusSchema), procurementController.patchOrderStatus);
 router.post('/procurement/orders/:id/items', requireRole(procurementRoles), validateBody(AddItemSchema), procurementController.addItem);
