@@ -66,6 +66,19 @@ export async function getAllSubsForSend(organizationId: string): Promise<
   return rows as Array<{ endpoint: string; p256dh: string; auth: string }>;
 }
 
+export async function getSubsForUser(params: {
+  organizationId: string;
+  userId: string;
+}): Promise<Array<{ endpoint: string; p256dh: string; auth: string }>> {
+  const { rows } = await pool.query(
+    `SELECT endpoint, p256dh, auth
+     FROM webpush_subscriptions
+     WHERE organization_id = $1::uuid AND user_id = $2::uuid`,
+    [params.organizationId, params.userId]
+  );
+  return rows as Array<{ endpoint: string; p256dh: string; auth: string }>;
+}
+
 export async function removeByEndpointGlobal(endpoint: string): Promise<void> {
   await pool.query(`DELETE FROM webpush_subscriptions WHERE endpoint = $1`, [endpoint]);
 }

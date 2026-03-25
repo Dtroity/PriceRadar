@@ -3,7 +3,25 @@ import type { Supplier } from '../types/index.js';
 
 export async function getAllByOrganization(organizationId: string): Promise<Supplier[]> {
   const { rows } = await pool.query(
-    'SELECT id, organization_id, name, created_at FROM suppliers WHERE organization_id = $1 ORDER BY name',
+    `
+    SELECT
+      s.id,
+      s.organization_id,
+      s.name,
+      s.created_at,
+      s.contact_name,
+      s.email,
+      s.phone,
+      s.telegram_chat_id,
+      s.notify_channel,
+      s.is_active,
+      COALESCE(COUNT(f.id), 0)::int AS filters_count
+    FROM suppliers s
+    LEFT JOIN supplier_filters f ON f.supplier_id = s.id
+    WHERE s.organization_id = $1
+    GROUP BY s.id
+    ORDER BY s.name
+    `,
     [organizationId]
   );
   return rows;
@@ -11,7 +29,23 @@ export async function getAllByOrganization(organizationId: string): Promise<Supp
 
 export async function getById(id: string, organizationId: string): Promise<Supplier | null> {
   const { rows } = await pool.query(
-    'SELECT id, organization_id, name, created_at FROM suppliers WHERE id = $1 AND organization_id = $2',
+    `
+    SELECT
+      id,
+      organization_id,
+      name,
+      created_at,
+      contact_name,
+      email,
+      phone,
+      telegram_chat_id,
+      notify_channel,
+      is_active,
+      invite_token,
+      account_user_id
+    FROM suppliers
+    WHERE id = $1 AND organization_id = $2
+    `,
     [id, organizationId]
   );
   return rows[0] ?? null;

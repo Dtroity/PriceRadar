@@ -22,6 +22,15 @@ export interface Supplier {
   id: string;
   organization_id: string;
   name: string;
+  contact_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  telegram_chat_id?: string | null;
+  notify_channel?: string | null;
+  is_active?: boolean | null;
+  invite_token?: string | null;
+  account_user_id?: string | null;
+  filters_count?: number;
   created_at: Date;
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { request } from '../api/client';
+import NotificationMatrix from '../components/notifications/NotificationMatrix';
 
 type Settings = {
   notify_email: string | null;
@@ -130,6 +131,8 @@ export default function NotificationsSettings() {
           Сохранить email
         </button>
       </section>
+
+      <NotificationMatrix />
 
       <section className="border border-slate-200 rounded-lg p-4 bg-white space-y-3">
         <h2 className="font-medium">VK Notify</h2>

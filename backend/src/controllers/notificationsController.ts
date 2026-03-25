@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../auth/middleware.js';
 import * as orgNotify from '../models/organizationNotifyModel.js';
 import * as webpushModel from '../models/webpushSubscriptionsModel.js';
+import * as matrixModel from '../models/notificationSettingsModel.js';
 import { organizationHasModule } from '../modules/_shared/subscriptionRepository.js';
 import { sendTestNotifications } from '../services/notificationService.js';
 
@@ -139,4 +140,65 @@ export async function getVapidPublicKey(_req: AuthRequest, res: Response) {
   const key = process.env.VAPID_PUBLIC_KEY;
   if (!key) return res.json({ publicKey: null });
   return res.json({ publicKey: key });
+}
+
+const DEFAULTS: Array<{
+  event_type: string;
+  channel: string;
+  enabled: boolean;
+  include_details?: { items: boolean; total: boolean; link: boolean };
+}> = [
+  { event_type: 'order_dispatched', channel: 'webpush', enabled: true },
+  { event_type: 'order_dispatched', channel: 'in_app', enabled: true },
+  {
+    event_type: 'order_dispatched',
+    channel: 'email',
+    enabled: true,
+    include_details: { items: true, total: false, link: true },
+  },
+  { event_type: 'order_accepted', channel: 'webpush', enabled: true },
+  { event_type: 'order_accepted', channel: 'in_app', enabled: true },
+  { event_type: 'order_accepted', channel: 'telegram', enabled: false },
+  { event_type: 'order_rejected', channel: 'webpush', enabled: true },
+  { event_type: 'order_rejected', channel: 'email', enabled: true },
+  { event_type: 'order_rejected', channel: 'telegram', enabled: false },
+  { event_type: 'new_message', channel: 'webpush', enabled: true },
+  { event_type: 'new_message', channel: 'in_app', enabled: true },
+  { event_type: 'new_message', channel: 'telegram', enabled: false },
+  { event_type: 'anomaly_high', channel: 'webpush', enabled: true },
+  { event_type: 'anomaly_high', channel: 'email', enabled: true },
+  { event_type: 'anomaly_high', channel: 'telegram', enabled: false },
+  { event_type: 'anomaly_medium', channel: 'webpush', enabled: false },
+  {
+    event_type: 'weekly_report',
+    channel: 'email',
+    enabled: false,
+    include_details: { items: false, total: true, link: true },
+  },
+];
+
+export async function getMatrix(req: AuthRequest, res: Response) {
+  const orgId = requireOrg(req, res);
+  if (!orgId) return;
+  try {
+    const rows = await matrixModel.listByOrganization(orgId);
+    if (rows.length === 0) return res.json({ settings: DEFAULTS });
+    return res.json({ settings: rows });
+  } catch {
+    return res.status(503).json({ error: 'Matrix unavailable (run migrations?)' });
+  }
+}
+
+export async function putMatrix(req: AuthRequest, res: Response) {
+  const orgId = requireOrg(req, res);
+  if (!orgId) return;
+  const body = (req.body as unknown) as Array<{
+    event_type: string;
+    channel: string;
+    enabled: boolean;
+    include_details?: unknown;
+  }>;
+  if (!Array.isArray(body)) return res.status(400).json({ error: 'Array body required' });
+  await matrixModel.upsertMany(orgId, body);
+  return res.json({ ok: true });
 }

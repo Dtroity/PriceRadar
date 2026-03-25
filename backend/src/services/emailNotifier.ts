@@ -99,6 +99,7 @@ export async function sendSupplierOrderEmail(params: {
   items: Array<{ product_name: string; quantity: number | string; unit: string | null }>;
   orderLink: string;
   expiresAt: Date | string;
+  subject?: string;
 }): Promise<void> {
   const t = getTransport();
   if (!t) return;
@@ -141,7 +142,7 @@ export async function sendSupplierOrderEmail(params: {
   await t.sendMail({
     from,
     to: params.to,
-    subject: `Новый заказ от ${params.restaurantName}`,
+    subject: params.subject ?? `Новый заказ от ${params.restaurantName}`,
     html: wrapEmail(content),
   });
 }

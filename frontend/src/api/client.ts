@@ -89,6 +89,30 @@ export const api = {
     me: () => request<{ user: User }>('/auth/me'),
   },
   suppliers: () => request<{ suppliers: Supplier[] }>('/suppliers'),
+  supplier: {
+    patch: (id: string, body: Partial<{
+      contact_name: string | null;
+      email: string | null;
+      phone: string | null;
+      notify_channel: string | null;
+      is_active: boolean | null;
+    }>) =>
+      request<Supplier>(`/suppliers/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    filters: {
+      list: (id: string) => request<{ filters: Array<{ id: string; keyword: string }> }>(`/suppliers/${id}/filters`),
+      add: (id: string, keyword: string) =>
+        request<{ id: string; keyword: string }>(`/suppliers/${id}/filters`, {
+          method: 'POST',
+          body: JSON.stringify({ keyword }),
+        }),
+      remove: (id: string, filterId: string) =>
+        request<{ ok: boolean }>(`/suppliers/${id}/filters/${filterId}`, { method: 'DELETE' }),
+    },
+    invite: (id: string) => request<{ ok: boolean }>(`/suppliers/${id}/invite`, { method: 'POST' }),
+  },
   products: () => request<{ products: Product[] }>('/products'),
   setPriority: (id: string, isPriority: boolean) =>
     request<{ ok: boolean }>(`/products/${id}/priority`, {
@@ -229,6 +253,13 @@ export interface Supplier {
   id: string;
   name: string;
   created_at: string;
+  contact_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  telegram_chat_id?: string | null;
+  notify_channel?: string | null;
+  is_active?: boolean | null;
+  filters_count?: number;
 }
 
 export interface Product {

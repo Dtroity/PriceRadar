@@ -15,6 +15,7 @@ import {
 import AddProductRow from '../../components/procurement/AddProductRow';
 import OrderStatusBadge from '../../components/procurement/OrderStatusBadge';
 import { useT } from '../../i18n/LocaleContext';
+import OrderDispatches from './OrderDispatches';
 
 const NEXT: Record<ProcurementOrderStatus, ProcurementOrderStatus[]> = {
   draft: ['pending', 'cancelled'],
@@ -36,6 +37,7 @@ export default function OrderDetail() {
   const [supplierId, setSupplierId] = useState('');
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [tab, setTab] = useState<'items' | 'dispatches'>('items');
 
   const reload = useCallback(async () => {
     if (!id) return;
@@ -211,59 +213,83 @@ export default function OrderDetail() {
         )}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-          <h2 className="font-medium text-slate-800">{t('procurement.lines')}</h2>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium border ${tab === 'items' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700'}`}
+              onClick={() => setTab('items')}
+            >
+              {t('procurement.lines')}
+            </button>
+            <button
+              type="button"
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium border ${tab === 'dispatches' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700'}`}
+              onClick={() => setTab('dispatches')}
+            >
+              Отправки
+            </button>
+          </div>
           <p className="text-sm text-slate-600">
             {t('procurement.total')}: <strong>{order.total_sum.toFixed(2)}</strong>
           </p>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-slate-50">
-              <th className="px-3 py-2 text-left">{t('dashboard.product')}</th>
-              <th className="px-3 py-2 text-left">{t('procurement.quantity')}</th>
-              <th className="px-3 py-2 text-left">{t('procurement.targetPrice')}</th>
-              <th className="px-3 py-2 text-left">{t('procurement.actualPrice')}</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {order.items.map((it) => (
-              <tr key={it.id} className="border-b border-slate-100">
-                <td className="px-3 py-2">{it.product_name ?? it.product_id}</td>
-                <td className="px-3 py-2">
-                  <input
-                    className="w-24 rounded border border-slate-200 px-2 py-1"
-                    defaultValue={it.quantity}
-                    key={`${it.id}-q-${it.quantity}`}
-                    onBlur={(e) => void commitItemQuantity(it.id, e.target.value)}
-                  />
-                </td>
-                <td className="px-3 py-2 text-slate-600">{it.target_price ?? '—'}</td>
-                <td className="px-3 py-2">
-                  <input
-                    className="w-24 rounded border border-slate-200 px-2 py-1"
-                    placeholder="—"
-                    defaultValue={it.actual_price ?? ''}
-                    key={`${it.id}-a-${it.actual_price}`}
-                    onBlur={(e) => void commitItemActual(it.id, e.target.value)}
-                  />
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    className="text-xs text-red-600 hover:underline"
-                    onClick={() => void removeItem(it.id)}
-                  >
-                    {t('procurement.removeLine')}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <AddProductRow orderId={id} products={products} onAdded={() => void reload()} />
+
+        {tab === 'items' ? (
+          <>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-slate-50">
+                  <th className="px-3 py-2 text-left">{t('dashboard.product')}</th>
+                  <th className="px-3 py-2 text-left">{t('procurement.quantity')}</th>
+                  <th className="px-3 py-2 text-left">{t('procurement.targetPrice')}</th>
+                  <th className="px-3 py-2 text-left">{t('procurement.actualPrice')}</th>
+                  <th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {order.items.map((it) => (
+                  <tr key={it.id} className="border-b border-slate-100">
+                    <td className="px-3 py-2">{it.product_name ?? it.product_id}</td>
+                    <td className="px-3 py-2">
+                      <input
+                        className="w-24 rounded border border-slate-200 px-2 py-1"
+                        defaultValue={it.quantity}
+                        key={`${it.id}-q-${it.quantity}`}
+                        onBlur={(e) => void commitItemQuantity(it.id, e.target.value)}
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-slate-600">{it.target_price ?? '—'}</td>
+                    <td className="px-3 py-2">
+                      <input
+                        className="w-24 rounded border border-slate-200 px-2 py-1"
+                        placeholder="—"
+                        defaultValue={it.actual_price ?? ''}
+                        key={`${it.id}-a-${it.actual_price}`}
+                        onBlur={(e) => void commitItemActual(it.id, e.target.value)}
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        type="button"
+                        className="text-xs text-red-600 hover:underline"
+                        onClick={() => void removeItem(it.id)}
+                      >
+                        {t('procurement.removeLine')}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <AddProductRow orderId={id} products={products} onAdded={() => void reload()} />
+          </>
+        ) : (
+          <div className="p-4">
+            <OrderDispatches orderId={id} />
+          </div>
+        )}
       </div>
     </div>
   );

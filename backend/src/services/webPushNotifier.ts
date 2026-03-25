@@ -65,3 +65,36 @@ export async function sendWebPushNotification(organizationId: string, event: Not
     })
   );
 }
+
+export async function sendWebPushNotificationToUser(params: {
+  organizationId: string;
+  userId: string;
+  title: string;
+  body: string;
+  url: string;
+}): Promise<void> {
+  if (!ensureVapid()) return;
+  const subs = await webpushModel.getSubsForUser({
+    organizationId: params.organizationId,
+    userId: params.userId,
+  });
+  if (subs.length === 0) return;
+  const payload = JSON.stringify({ title: params.title, body: params.body, url: params.url });
+  await Promise.allSettled(
+    subs.map(async (sub) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload
+        );
+      } catch (err: unknown) {
+        const status = (err as { statusCode?: number }).statusCode;
+        if (status === 410) {
+          await webpushModel.removeByEndpointGlobal(sub.endpoint).catch(() => {});
+        } else {
+          logger.warn({ err, endpoint: sub.endpoint }, 'webpush send failed');
+        }
+      }
+    })
+  );
+}
