@@ -1,0 +1,10 @@
+# Не копировать в контекст сборки — иначе COPY */ ./ затирает слой npm ci
+# и даёт sh: tsc: Permission denied (node_modules с Windows/VPS).
+**/node_modules
+**/.git
+**/dist
+**/.env
+**/.env.*
+**/.DS_Store
+**/coverage
+**/.cursor
