@@ -147,6 +147,8 @@ chmod 600 /opt/vizor360/keys/google.json
 
 ## 5) Caddy (HTTPS reverse proxy)
 
+**Порядок:** файл `Caddyfile` можно создать заранее. Контейнер `caddy` с `--network vizor360_default` запускайте **после** первого успешного `docker compose up` (шаг 6), иначе сети ещё нет. Если Caddy уже запущен — достаточно обновить `Caddyfile`, `docker network connect …` и `caddy reload` (команды ниже).
+
 Создать файл `/opt/vizor360/Caddyfile`:
 
 ```bash
@@ -162,29 +164,33 @@ nano /opt/vizor360/Caddyfile
 
 vizor360.ru, www.vizor360.ru {
   encode gzip
-  reverse_proxy localhost:5173
+  reverse_proxy vizor360-frontend:80
 }
 
 vizor360.online, www.vizor360.online {
   encode gzip
-  reverse_proxy localhost:5173
+  reverse_proxy vizor360-frontend:80
 }
 
 # API можно обслуживать по /api (через frontend уже проксируется),
 # но на всякий случай можно открыть прямой домен:
 api.vizor360.ru {
   encode gzip
-  reverse_proxy localhost:3001
+  reverse_proxy vizor360-backend:3001
 }
 ```
 
-Запустить Caddy контейнером:
+**Важно:** Caddy запускается **в отдельном контейнере**. Запись `localhost:5173` в Caddyfile указывает на **localhost внутри контейнера Caddy**, а не на сервер — в итоге **502 Bad Gateway**. Нужны **имена контейнеров** и **внутренние** порты: у frontend внутри образа это **80** (хостовый `5173` — только проброс снаружи).
+
+Запуск сервисов приложения (см. шаг 6) создаёт сеть вида **`vizor360_default`** (имя каталога проекта + `_default`). Проверка: `docker network ls`.
+
+Запустить Caddy **в той же сети**, что и `docker compose` (после первого успешного `docker compose up`):
 
 ```bash
-docker network create caddy_net || true
 docker rm -f caddy || true
 docker run -d --name caddy \
   --restart unless-stopped \
+  --network vizor360_default \
   -p 80:80 -p 443:443 \
   -v /opt/vizor360/Caddyfile:/etc/caddy/Caddyfile:ro \
   -v caddy_data:/data \
@@ -193,9 +199,18 @@ docker run -d --name caddy \
 docker logs -n 50 caddy
 ```
 
+Если Caddy уже был запущен без `--network`, подключите сеть и перезагрузите конфиг:
+
+```bash
+docker network connect vizor360_default caddy
+docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
+(Если `network connect` ругается на «already connected» — достаточно обновить Caddyfile и выполнить `reload`.)
+
 ## 6) Запуск сервисов приложения
 
-В проекте `frontend` слушает `5173:80`, backend `3001:3001` — Caddy проксирует на них.
+На хосте frontend доступен как **`127.0.0.1:5173`** (`5173:80` в compose). Для Caddy в Docker используйте **`vizor360-frontend:80`** (см. шаг 5).
 
 ```bash
 cd /opt/vizor360
