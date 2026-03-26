@@ -290,6 +290,7 @@ router.delete(
 router.get('/notifications/vapid-public-key', notificationsController.getVapidPublicKey);
 
 router.get('/suppliers', suppliersController.list);
+router.post('/suppliers', requireRole(['super_admin', 'org_admin', 'manager']), suppliersController.createSupplier);
 router.patch('/suppliers/:id', requireRole(['super_admin', 'org_admin']), suppliersController.patchSupplier);
 router.get('/suppliers/:id/filters', requireRole(['super_admin', 'org_admin', 'manager']), suppliersController.listSupplierFilters);
 router.post('/suppliers/:id/filters', requireRole(['super_admin', 'org_admin', 'manager']), suppliersController.addSupplierFilter);

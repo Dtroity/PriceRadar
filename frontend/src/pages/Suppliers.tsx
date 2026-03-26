@@ -11,15 +11,21 @@ function badge(className: string, text: string) {
   );
 }
 
-export default function Suppliers() {
+export default function Suppliers({ embedded = false }: { embedded?: boolean }) {
   const t = useT();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Supplier | null>(null);
+  const [newSupplierName, setNewSupplierName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<'name' | 'filters_desc' | 'filters_asc'>('name');
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setError(null);
     api
       .suppliers()
       .then((r) => {
@@ -35,10 +41,43 @@ export default function Suppliers() {
 
   const byId = useMemo(() => new Map(suppliers.map((s) => [s.id, s])), [suppliers]);
   const selectedFresh = selected ? byId.get(selected.id) ?? selected : null;
+  const visibleSuppliers = suppliers
+    .filter((s) => {
+      const q = search.trim().toLowerCase();
+      if (!q) return true;
+      const email = String((s as any).email ?? '').toLowerCase();
+      const contact = String((s as any).contact_name ?? '').toLowerCase();
+      return s.name.toLowerCase().includes(q) || email.includes(q) || contact.includes(q);
+    })
+    .sort((a, b) => {
+      if (sort === 'name') return a.name.localeCompare(b.name);
+      const fa = Number((a as any).filters_count ?? 0);
+      const fb = Number((b as any).filters_count ?? 0);
+      return sort === 'filters_asc' ? fa - fb : fb - fa;
+    });
 
   const onSupplierUpdated = (s: Supplier) => {
     setSuppliers((prev) => prev.map((p) => (p.id === s.id ? { ...p, ...s } : p)));
     setSelected((prev) => (prev?.id === s.id ? { ...prev, ...s } : prev));
+  };
+
+  const addSupplier = async () => {
+    const name = newSupplierName.trim();
+    if (!name) return;
+    setCreating(true);
+    setError(null);
+    try {
+      const created = await api.supplier.create(name);
+      setSuppliers((prev) => {
+        if (prev.some((s) => s.id === created.id)) return prev;
+        return [...prev, created].sort((a, b) => a.name.localeCompare(b.name));
+      });
+      setNewSupplierName('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create supplier');
+    } finally {
+      setCreating(false);
+    }
   };
 
   const channelBadge = (s: Supplier) => {
@@ -52,12 +91,54 @@ export default function Suppliers() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-slate-800">{t('suppliers.title')}</h1>
-      <p className="text-slate-600">{t('suppliers.description')}</p>
+      {!embedded && (
+        <>
+          <h1 className="text-xl font-semibold text-slate-800">{t('suppliers.title')}</h1>
+          <p className="text-slate-600">{t('suppliers.description')}</p>
+        </>
+      )}
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-wrap gap-2">
+          <input
+            type="text"
+            value={newSupplierName}
+            onChange={(e) => setNewSupplierName(e.target.value)}
+            placeholder="Новый поставщик"
+            className="min-w-[220px] flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          />
+          <button
+            type="button"
+            disabled={creating || !newSupplierName.trim()}
+            onClick={() => void addSupplier()}
+            className="rounded-lg bg-slate-800 px-4 py-2 text-sm text-white disabled:opacity-50"
+          >
+            {creating ? 'Добавление…' : 'Добавить поставщика'}
+          </button>
+        </div>
+        {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
+      </div>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="px-4 py-3 border-b text-sm text-slate-600">
           {loading ? 'Загрузка…' : `Поставщиков: ${suppliers.length}`}
+        </div>
+        <div className="grid gap-2 border-b border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Поиск поставщика, email или контакта"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          />
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as 'name' | 'filters_desc' | 'filters_asc')}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="name">Сортировка: по имени</option>
+            <option value="filters_desc">Сортировка: больше фильтров сверху</option>
+            <option value="filters_asc">Сортировка: меньше фильтров сверху</option>
+          </select>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-[920px] w-full text-sm">
@@ -72,7 +153,7 @@ export default function Suppliers() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {suppliers.map((s) => {
+              {visibleSuppliers.map((s) => {
                 const filtersCount = Number((s as any).filters_count ?? 0);
                 const active = Boolean((s as any).is_active ?? true);
                 return (
@@ -106,10 +187,10 @@ export default function Suppliers() {
                   </tr>
                 );
               })}
-              {!loading && suppliers.length === 0 && (
+              {!loading && visibleSuppliers.length === 0 && (
                 <tr>
                   <td className="px-4 py-6 text-slate-500" colSpan={6}>
-                    Поставщики не найдены
+                    Поставщики не найдены по заданному фильтру
                   </td>
                 </tr>
               )}

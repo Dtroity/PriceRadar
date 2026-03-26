@@ -22,6 +22,20 @@ export async function list(req: unknown, res: Response) {
   }
 }
 
+export async function createSupplier(req: AuthRequest, res: Response) {
+  try {
+    const orgId = req.user?.organizationId;
+    if (!orgId) return res.status(400).json({ error: 'Organization required' });
+    const name = String((req.body as { name?: string } | undefined)?.name ?? '').trim();
+    if (!name) return res.status(400).json({ error: 'name required' });
+    const created = await suppliersMt.findOrCreate(orgId, name);
+    return res.status(201).json(created);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to create supplier' });
+  }
+}
+
 export async function patchSupplier(req: AuthRequest, res: Response) {
   const orgId = req.user?.organizationId;
   if (!orgId) return res.status(400).json({ error: 'Organization required' });

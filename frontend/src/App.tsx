@@ -14,7 +14,6 @@ import Documents from './pages/Documents';
 import DocumentDetail from './pages/DocumentDetail';
 import Forecast from './pages/Forecast';
 import FoodCost from './pages/FoodCost';
-import Suppliers from './pages/Suppliers';
 import Products from './pages/Products';
 import Integrations from './pages/Integrations';
 import Settings from './pages/Settings';
@@ -84,14 +83,18 @@ export default function App() {
                 <Route path="/prices" element={<Dashboard />} />
                 <Route path="/forecast" element={<Forecast />} />
                 <Route path="/foodcost" element={<FoodCost />} />
-                <Route path="/suppliers" element={<Suppliers />} />
+                <Route path="/suppliers" element={<Navigate to="/procurement/suppliers" replace />} />
                 <Route path="/products" element={<Products />} />
-                <Route path="/integrations" element={<Integrations />} />
+                <Route path="/integrations" element={<Navigate to="/settings/integrations" replace />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/settings/notifications" element={<NotificationsSettings />} />
-                <Route path="/admin" element={<Admin />} />
+                <Route path="/settings/integrations" element={<Integrations />} />
+                <Route path="/settings/telegram" element={<TelegramAdmin />} />
+                <Route path="/settings/admin" element={<Admin />} />
+                <Route path="/settings/admin/org/:id" element={<AdminOrgDetail />} />
+                <Route path="/admin" element={<Navigate to="/settings/admin" replace />} />
                 <Route path="/admin/org/:id" element={<AdminOrgDetail />} />
-                <Route path="/telegram" element={<TelegramAdmin />} />
+                <Route path="/telegram" element={<Navigate to="/settings/telegram" replace />} />
                 <Route path="/procurement" element={<Procurement />} />
                 <Route path="/procurement/recommendations" element={<ProcurementRecommendations />} />
                 <Route path="/procurement/orders" element={<ProcurementOrders />} />

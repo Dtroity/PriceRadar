@@ -4,6 +4,26 @@ function getToken(): string | null {
   return localStorage.getItem('accessToken');
 }
 
+async function readApiError(res: Response, fallback = 'Request failed'): Promise<string> {
+  const contentType = res.headers.get('content-type') ?? '';
+  if (contentType.includes('application/json')) {
+    try {
+      const data = (await res.json()) as { error?: string; message?: string };
+      return data.error || data.message || `HTTP ${res.status}`;
+    } catch {
+      return `HTTP ${res.status}`;
+    }
+  }
+  try {
+    const text = await res.text();
+    if (!text) return `HTTP ${res.status}`;
+    if (text.trim().startsWith('<')) return `HTTP ${res.status} ${res.statusText}`.trim();
+    return text;
+  } catch {
+    return fallback;
+  }
+}
+
 /** Exported for module endpoints (procurement, order-automation). */
 export async function request<T>(
   path: string,
@@ -21,20 +41,13 @@ export async function request<T>(
     if (refreshed) {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${getToken()}`;
       const retry = await fetch(`${API}${path}`, { ...options, headers });
-      if (!retry.ok) throw new Error(await retry.text());
+      if (!retry.ok) throw new Error(await readApiError(retry, 'Request failed after token refresh'));
       return retry.json();
     }
     throw new Error('Unauthorized');
   }
   if (!res.ok) {
-    const text = await res.text();
-    let err: { error?: string };
-    try {
-      err = JSON.parse(text);
-    } catch {
-      err = { error: text };
-    }
-    throw new Error(err.error || `HTTP ${res.status}`);
+    throw new Error(await readApiError(res));
   }
   return res.json();
 }
@@ -90,6 +103,11 @@ export const api = {
   },
   suppliers: () => request<{ suppliers: Supplier[] }>('/suppliers'),
   supplier: {
+    create: (name: string) =>
+      request<Supplier>('/suppliers', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      }),
     patch: (id: string, body: Partial<{
       contact_name: string | null;
       email: string | null;
@@ -163,8 +181,8 @@ export const api = {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: form,
-    }).then((r) => {
-      if (!r.ok) return r.json().then((d) => Promise.reject(new Error(d.error)));
+    }).then(async (r) => {
+      if (!r.ok) throw new Error(await readApiError(r, 'Upload failed'));
       return r.json();
     });
   },
@@ -221,8 +239,8 @@ export const api = {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: form,
-      }).then((r) => {
-        if (!r.ok) return r.json().then((d) => Promise.reject(new Error(d.error || 'Upload failed')));
+      }).then(async (r) => {
+        if (!r.ok) throw new Error(await readApiError(r, 'Upload failed'));
         return r.json();
       }) as Promise<{ message: string; documentId: string }>;
     },

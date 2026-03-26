@@ -67,7 +67,7 @@ export async function listActive(
   organizationId: string,
   filters: { reason?: RecReason; priorityMax?: number } = {}
 ): Promise<RecommendationRow[]> {
-  const cond = ["organization_id = $1::uuid", "status = 'active'"];
+  const cond = ["r.organization_id = $1::uuid", "r.status = 'active'"];
   const params: unknown[] = [organizationId];
   let i = 1;
   if (filters.reason) {

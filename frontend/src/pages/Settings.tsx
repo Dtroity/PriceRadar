@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import { useT } from '../i18n/LocaleContext';
+import { useAuth } from '../auth/AuthContext';
 
 export default function Settings() {
   const t = useT();
+  const { user } = useAuth();
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-slate-800">{t('settings.title')}</h1>
@@ -15,17 +17,25 @@ export default function Settings() {
           Настройки уведомлений (Email, VK, Web Push)
         </Link>
         <Link
-          to="/integrations"
+          to="/settings/integrations"
           className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-800 hover:bg-slate-50"
         >
           Интеграции (iiko, Telegram)
         </Link>
         <Link
-          to="/telegram"
+          to="/settings/telegram"
           className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-800 hover:bg-slate-50"
         >
           Telegram: пользователи и настройки
         </Link>
+        {user?.role === 'super_admin' && (
+          <Link
+            to="/settings/admin"
+            className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-800 hover:bg-slate-50"
+          >
+            Админ платформы
+          </Link>
+        )}
       </div>
     </div>
   );

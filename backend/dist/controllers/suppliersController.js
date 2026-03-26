@@ -19,6 +19,22 @@ export async function list(req, res) {
         return res.status(500).json({ error: 'Failed to fetch suppliers' });
     }
 }
+export async function createSupplier(req, res) {
+    try {
+        const orgId = req.user?.organizationId;
+        if (!orgId)
+            return res.status(400).json({ error: 'Organization required' });
+        const name = String(req.body?.name ?? '').trim();
+        if (!name)
+            return res.status(400).json({ error: 'name required' });
+        const created = await suppliersMt.findOrCreate(orgId, name);
+        return res.status(201).json(created);
+    }
+    catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Failed to create supplier' });
+    }
+}
 export async function patchSupplier(req, res) {
     const orgId = req.user?.organizationId;
     if (!orgId)

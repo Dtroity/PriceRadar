@@ -32,22 +32,23 @@ export default function Sidebar({ tabletOverlayOpen, onCloseTabletOverlay }: Pro
     { to: '/documents', label: t('nav.scan') },
     { to: '/analytics', label: t('nav.analytics') },
     { to: '/procurement', label: t('nav.procurement') },
-    { to: '/suppliers', label: t('nav.suppliers') },
+    { to: '/procurement/suppliers', label: t('nav.suppliers') },
+    { to: '/procurement/rules', label: 'Фильтры товаров' },
     { to: '/products', label: t('nav.products') },
     { to: '/prices', label: t('nav.prices') },
     { to: '/forecast', label: t('nav.forecast') },
     { to: '/foodcost', label: t('nav.foodcost') },
     { to: '/stock', label: t('nav.stock') },
-    { to: '/integrations', label: t('nav.integrations') },
     { to: '/settings', label: t('nav.settings') },
     { to: '/settings/notifications', label: 'Уведомления' },
+    { to: '/settings/integrations', label: t('nav.integrations') },
   ];
 
   if (user?.role === 'super_admin' || user?.role === 'org_admin') {
-    core.splice(5, 0, { to: '/telegram', label: t('nav.telegram') });
+    core.push({ to: '/settings/telegram', label: t('nav.telegram') });
   }
   if (user?.role === 'super_admin') {
-    core.push({ to: '/admin', label: 'Админ' });
+    core.push({ to: '/settings/admin', label: 'Админ платформы' });
   }
 
   const linkClass = (isActive: boolean, compact: boolean) =>

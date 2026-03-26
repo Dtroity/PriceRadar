@@ -1,0 +1,35 @@
+from contextlib import asynccontextmanager
+
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.orm import DeclarativeBase
+
+from .config import settings
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+engine = create_async_engine(
+    settings.database_url,
+    echo=False,
+    pool_pre_ping=True,
+    pool_recycle=280,
+    pool_size=5,
+    max_overflow=5,
+)
+
+Session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+@asynccontextmanager
+async def get_session():
+    """Async context manager for DB session. Use: async with get_session() as session:"""
+    async with Session() as session:
+        yield session
+
+
+async def init_db():
+    from db.models import Base
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
