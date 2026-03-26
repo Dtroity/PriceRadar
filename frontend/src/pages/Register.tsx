@@ -89,6 +89,7 @@ export default function Register() {
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg mb-4"
+            required
           />
           <label className="block text-sm font-medium text-slate-700 mb-1">{t('auth.email')}</label>
           <input

@@ -120,6 +120,7 @@ export default function Documents() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadInfo, setUploadInfo] = useState<string | null>(null);
 
   const load = async () => {
     const status = statusFilter || undefined;
@@ -138,14 +139,28 @@ export default function Documents() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadError(null);
+    setUploadInfo(null);
     setUploading(true);
-    api.documents
-      .upload(file, 'web')
+    const lowerName = file.name.toLowerCase();
+    const ext = lowerName.includes('.') ? lowerName.split('.').pop() ?? '' : '';
+    const isPriceListFile = ['xls', 'xlsx', 'csv', 'doc', 'docx'].includes(ext);
+    const uploadPromise = isPriceListFile
+      ? api.upload(file, 'Unknown Supplier', 'web')
+      : api.documents.upload(file, 'web');
+
+    uploadPromise
       .then(() => {
+        if (isPriceListFile) {
+          setUploadInfo('Файл поставлен в очередь на обработку прайс-листа. Результат появится в Ценах/Аналитике после обработки.');
+          return null;
+        }
+        setUploadInfo('Документ загружен и поставлен в очередь OCR.');
         setStatusFilter('');
         return api.documents.list();
       })
-      .then(setDocuments)
+      .then((list) => {
+        if (list) setDocuments(list);
+      })
       .catch((err) => setUploadError(err instanceof Error ? err.message : t('documents.uploadFailed')))
       .finally(() => setUploading(false));
     e.target.value = '';
@@ -249,7 +264,13 @@ export default function Documents() {
             ))}
           </select>
           <label className="inline-flex min-h-[44px] cursor-pointer items-center rounded-lg bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700">
-            <input type="file" className="hidden" accept=".pdf,image/*" onChange={onFileSelect} disabled={uploading} />
+            <input
+              type="file"
+              className="hidden"
+              accept=".xls,.xlsx,.csv,.pdf,.doc,.docx,image/*"
+              onChange={onFileSelect}
+              disabled={uploading}
+            />
             {uploading ? t('documents.uploading') : t('documents.uploadInvoice')}
           </label>
         </div>
@@ -257,6 +278,7 @@ export default function Documents() {
       {uploadError && (
         <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{uploadError}</div>
       )}
+      {uploadInfo && <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{uploadInfo}</div>}
       <p className="text-slate-600">
         {t('documents.moduleDescription')}. {t('documents.description')}
       </p>

@@ -15,6 +15,7 @@ import * as priceTrendController from '../controllers/priceTrendController.js';
 import * as documentMetricsController from '../controllers/documentMetricsController.js';
 import * as analyticsController from '../controllers/analyticsController.js';
 import * as procurementController from '../controllers/procurementController.js';
+import * as dispatchesController from '../controllers/dispatchesController.js';
 import * as iikoIntegrationController from '../controllers/iikoIntegrationController.js';
 import * as adminController from '../controllers/adminController.js';
 import * as notificationsController from '../controllers/notificationsController.js';
@@ -214,11 +215,18 @@ router.get('/admin/stats', requireRole('super_admin'), adminController.platformS
 // Notifications (org)
 router.get('/notifications/settings', notificationsController.getSettings);
 router.patch('/notifications/settings', validateBody(notificationsPatchSchema), notificationsController.patchSettings);
+router.get('/notifications/settings/matrix', notificationsController.getMatrix);
+router.put('/notifications/settings/matrix', notificationsController.putMatrix);
 router.post('/notifications/test', notificationsController.postTest);
 router.post('/notifications/webpush/subscribe', validateBody(webpushSubscribeSchema), notificationsController.postWebPushSubscribe);
 router.delete('/notifications/webpush/subscribe', validateBody(webpushDeleteSchema), notificationsController.deleteWebPushSubscribe);
 router.get('/notifications/vapid-public-key', notificationsController.getVapidPublicKey);
 router.get('/suppliers', suppliersController.list);
+router.patch('/suppliers/:id', requireRole(['super_admin', 'org_admin']), suppliersController.patchSupplier);
+router.get('/suppliers/:id/filters', requireRole(['super_admin', 'org_admin', 'manager']), suppliersController.listSupplierFilters);
+router.post('/suppliers/:id/filters', requireRole(['super_admin', 'org_admin', 'manager']), suppliersController.addSupplierFilter);
+router.delete('/suppliers/:id/filters/:filterId', requireRole(['super_admin', 'org_admin', 'manager']), suppliersController.deleteSupplierFilter);
+router.post('/suppliers/:id/invite', requireRole(['super_admin', 'org_admin']), suppliersController.inviteSupplier);
 router.get('/suppliers/recommendations', requireModule('supplier_intelligence'), supplierRecommendationsController.recommendations);
 router.get('/products', productsController.list);
 router.get('/products/duplicates', requireRole(['super_admin', 'org_admin']), productsController.getDuplicates);
@@ -242,6 +250,7 @@ const procurementEmployeeRoles = ['super_admin', 'org_admin', 'manager', 'employ
 router.get('/procurement/orders', requireRole(procurementEmployeeRoles), procurementController.listOrders);
 router.post('/procurement/orders', requireRole(procurementEmployeeRoles), validateBody(CreateOrderSchema), procurementController.createOrder);
 router.get('/procurement/orders/:id', requireRole(procurementEmployeeRoles), procurementController.getOrder);
+router.get('/procurement/orders/:id/dispatches', requireRole(procurementRoles), dispatchesController.listOrderDispatches);
 router.patch('/procurement/orders/:id', requireRole(procurementRoles), validateBody(PatchOrderHeaderSchema), procurementController.patchOrder);
 router.patch('/procurement/orders/:id/status', requireRole(procurementRoles), validateBody(UpdateOrderStatusSchema), procurementController.patchOrderStatus);
 router.post('/procurement/orders/:id/items', requireRole(procurementRoles), validateBody(AddItemSchema), procurementController.addItem);
@@ -249,6 +258,9 @@ router.patch('/procurement/orders/:id/items/:itemId', requireRole(procurementRol
 router.delete('/procurement/orders/:id/items/:itemId', requireRole(procurementRoles), procurementController.deleteItem);
 router.get('/procurement/price-hint', requireRole(procurementRoles), procurementController.priceHint);
 router.get('/procurement/recommendations', requireRole(procurementRoles), procurementController.listRecommendations);
+router.get('/procurement/dispatches/:dispatchId/messages', requireRole(procurementRoles), dispatchesController.getDispatchMessages);
+router.post('/procurement/dispatches/:dispatchId/messages', requireRole(procurementRoles), dispatchesController.postDispatchMessage);
+router.post('/procurement/dispatches/:dispatchId/resend', requireRole(procurementRoles), dispatchesController.resendDispatch);
 router.post('/procurement/recommendations/generate', requireRole(procurementRoles), procurementController.runGenerateRecommendations);
 router.patch('/procurement/recommendations/:id/accept', requireRole(procurementRoles), procurementController.acceptRecommendation);
 router.patch('/procurement/recommendations/:id/dismiss', requireRole(procurementRoles), procurementController.dismissRecommendation);

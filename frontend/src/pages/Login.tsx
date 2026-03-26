@@ -11,7 +11,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, loginWithOrg } = useAuth();
+  const { loginWithOrg } = useAuth();
   const { t } = useLocale();
   const navigate = useNavigate();
 
@@ -20,12 +20,11 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      let u: { role?: string } | null = null;
-      if (organizationSlug.trim()) {
-        u = (await loginWithOrg?.(organizationSlug.trim(), email, password)) ?? null;
-      } else {
-        u = await login(email, password);
+      const slug = organizationSlug.trim();
+      if (!slug) {
+        throw new Error(t('auth.workspaceSlug'));
       }
+      const u = (await loginWithOrg?.(slug, email, password)) ?? null;
       if (u?.role === 'employee') navigate('/employee');
       else navigate('/');
     } catch (err) {
@@ -82,6 +81,7 @@ export default function Login() {
             value={organizationSlug}
             onChange={(e) => setOrganizationSlug(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg mb-4 focus:ring-2 focus:ring-slate-400 focus:border-slate-400"
+            required
           />
           <label className="block text-sm font-medium text-slate-700 mb-1">
             {t('auth.email')}

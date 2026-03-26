@@ -29,8 +29,13 @@ export const uploadMiddleware = multer({
             'image/jpeg',
             'image/png',
             'image/heic',
+            'image/heif',
+            'image/webp',
+            'application/octet-stream',
         ];
-        const ok = allowed.includes(file.mimetype) || file.mimetype.startsWith('image/');
+        const ext = path.extname(file.originalname).toLowerCase();
+        const allowedExt = ['.xls', '.xlsx', '.csv', '.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.heic', '.heif', '.webp'];
+        const ok = allowed.includes(file.mimetype) || file.mimetype.startsWith('image/') || allowedExt.includes(ext);
         if (ok)
             cb(null, true);
         else

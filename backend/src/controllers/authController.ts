@@ -18,6 +18,9 @@ function getUsersModel(payload?: { organizationId?: string }) {
 
 export async function register(req: Request, res: Response) {
   try {
+    if (config.multiTenant) {
+      return res.status(400).json({ error: 'Use /auth/register-org (workspace slug required)' });
+    }
     const { email, password, role = 'manager' } = req.body as {
       email?: string;
       password?: string;
@@ -50,6 +53,9 @@ export async function register(req: Request, res: Response) {
 
 export async function login(req: Request, res: Response) {
   try {
+    if (config.multiTenant) {
+      return res.status(400).json({ error: 'Use /auth/login-org (workspace slug required)' });
+    }
     const { email, password } = req.body as { email?: string; password?: string };
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });

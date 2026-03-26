@@ -166,7 +166,7 @@ export async function listRecommendations(filters?: {
   priority_max?: string;
 }): Promise<ProcurementRecommendation[]> {
   const res = await request<{ recommendations: ProcurementRecommendation[] }>(
-    `/procurement/recommendations${q(filters as Record<string, string | undefined>)}`
+    `/procurement/recommendations${q((filters ?? {}) as Record<string, string | undefined>)}`
   );
   return res.recommendations;
 }

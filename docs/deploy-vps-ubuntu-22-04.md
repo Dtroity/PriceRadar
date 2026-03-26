@@ -72,6 +72,7 @@ nano /opt/vizor360/.env
 
 ```env
 NODE_ENV=production
+MULTI_TENANT=true
 
 # БД (внутри docker сети хост = postgres)
 DATABASE_URL=postgresql://vizor360:СИЛЬНЫЙ_ПАРОЛЬ@postgres:5432/vizor360

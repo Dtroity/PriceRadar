@@ -36,6 +36,7 @@ services:
     ports:
       - "3001:3001"
     environment:
+      MULTI_TENANT: "true"
       DATABASE_URL: postgresql://vizor360:vizor360@postgres:5432/vizor360
       REDIS_HOST: redis
       REDIS_PORT: 6379
