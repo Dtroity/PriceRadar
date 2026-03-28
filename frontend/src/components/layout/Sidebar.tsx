@@ -24,7 +24,7 @@ function NavIcon({ to }: { to: string }) {
 }
 
 export default function Sidebar({ tabletOverlayOpen, onCloseTabletOverlay }: Props) {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const { t } = useLocale();
 
   const core: { to: string; label: string; end?: boolean }[] = [
@@ -32,24 +32,13 @@ export default function Sidebar({ tabletOverlayOpen, onCloseTabletOverlay }: Pro
     { to: '/documents', label: t('nav.scan') },
     { to: '/analytics', label: t('nav.analytics') },
     { to: '/procurement', label: t('nav.procurement') },
-    { to: '/procurement/suppliers', label: t('nav.suppliers') },
-    { to: '/procurement/rules', label: 'Фильтры товаров' },
     { to: '/products', label: t('nav.products') },
     { to: '/prices', label: t('nav.prices') },
     { to: '/forecast', label: t('nav.forecast') },
     { to: '/foodcost', label: t('nav.foodcost') },
     { to: '/stock', label: t('nav.stock') },
     { to: '/settings', label: t('nav.settings') },
-    { to: '/settings/notifications', label: 'Уведомления' },
-    { to: '/settings/integrations', label: t('nav.integrations') },
   ];
-
-  if (user?.role === 'super_admin' || user?.role === 'org_admin') {
-    core.push({ to: '/settings/telegram', label: t('nav.telegram') });
-  }
-  if (user?.role === 'super_admin') {
-    core.push({ to: '/settings/admin', label: 'Админ платформы' });
-  }
 
   const linkClass = (isActive: boolean, compact: boolean) =>
     cn(
@@ -83,21 +72,6 @@ export default function Sidebar({ tabletOverlayOpen, onCloseTabletOverlay }: Pro
         <div className={cn(compact && 'hidden lg:block')}>
           <AnomalyBadge />
         </div>
-        <NavLink
-          to="/analytics/anomalies"
-          title={compact ? 'Аномалии' : undefined}
-          onClick={() => onCloseTabletOverlay()}
-          className={({ isActive }) =>
-            cn(
-              linkClass(isActive, compact),
-              compact && 'lg:hidden flex justify-center',
-              !compact && 'hidden'
-            )
-          }
-        >
-          <span className="text-lg font-bold leading-none">!</span>
-          <span className="hidden lg:inline">Аномалии</span>
-        </NavLink>
       </div>
     </nav>
   );

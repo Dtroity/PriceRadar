@@ -30,7 +30,12 @@ export async function allowUser(req, res) {
         const { telegramId } = req.params;
         const { isAllowed } = req.body;
         if (role === 'super_admin') {
-            await telegramUsersModel.setTelegramUserAllowed(telegramId, Boolean(isAllowed));
+            if (organizationId) {
+                await telegramUsersModel.setTelegramUserAllowedWithOrg(telegramId, Boolean(isAllowed), organizationId);
+            }
+            else {
+                await telegramUsersModel.setTelegramUserAllowed(telegramId, Boolean(isAllowed));
+            }
         }
         else {
             if (!organizationId)

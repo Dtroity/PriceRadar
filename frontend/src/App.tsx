@@ -31,6 +31,10 @@ import Analytics from './pages/Analytics';
 import AnomaliesPage from './pages/analytics/Anomalies';
 import PublicOrderPage from './pages/public/OrderPage';
 import EmployeePage from './pages/Employee';
+import ProcurementModuleLayout from './components/layout/ProcurementModuleLayout';
+import SettingsModuleLayout from './components/layout/SettingsModuleLayout';
+import StockModuleLayout from './components/layout/StockModuleLayout';
+import AnalyticsModuleLayout from './components/layout/AnalyticsModuleLayout';
 
 function ErrorFallback() {
   const t = useT();
@@ -86,26 +90,34 @@ export default function App() {
                 <Route path="/suppliers" element={<Navigate to="/procurement/suppliers" replace />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/integrations" element={<Navigate to="/settings/integrations" replace />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/settings/notifications" element={<NotificationsSettings />} />
-                <Route path="/settings/integrations" element={<Integrations />} />
-                <Route path="/settings/telegram" element={<TelegramAdmin />} />
-                <Route path="/settings/admin" element={<Admin />} />
-                <Route path="/settings/admin/org/:id" element={<AdminOrgDetail />} />
+                <Route path="/settings" element={<SettingsModuleLayout />}>
+                  <Route index element={<Settings />} />
+                  <Route path="notifications" element={<NotificationsSettings />} />
+                  <Route path="integrations" element={<Integrations />} />
+                  <Route path="telegram" element={<TelegramAdmin />} />
+                  <Route path="admin" element={<Admin />} />
+                  <Route path="admin/org/:id" element={<AdminOrgDetail />} />
+                </Route>
                 <Route path="/admin" element={<Navigate to="/settings/admin" replace />} />
                 <Route path="/admin/org/:id" element={<AdminOrgDetail />} />
                 <Route path="/telegram" element={<Navigate to="/settings/telegram" replace />} />
-                <Route path="/procurement" element={<Procurement />} />
-                <Route path="/procurement/recommendations" element={<ProcurementRecommendations />} />
-                <Route path="/procurement/orders" element={<ProcurementOrders />} />
-                <Route path="/procurement/orders/:id" element={<OrderDetail />} />
-                <Route path="/procurement/suppliers" element={<ProcurementSuppliers />} />
-                <Route path="/procurement/rules" element={<AutomationRules />} />
-                <Route path="/stock" element={<StockOverview />} />
-                <Route path="/stock/forecast" element={<StockForecast />} />
-                <Route path="/stock/autopilot" element={<AutopilotRecommendations />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="/analytics/anomalies" element={<AnomaliesPage />} />
+                <Route path="/procurement" element={<ProcurementModuleLayout />}>
+                  <Route index element={<Procurement />} />
+                  <Route path="recommendations" element={<ProcurementRecommendations />} />
+                  <Route path="orders" element={<ProcurementOrders />} />
+                  <Route path="orders/:id" element={<OrderDetail />} />
+                  <Route path="suppliers" element={<ProcurementSuppliers />} />
+                  <Route path="rules" element={<AutomationRules />} />
+                </Route>
+                <Route path="/stock" element={<StockModuleLayout />}>
+                  <Route index element={<StockOverview />} />
+                  <Route path="forecast" element={<StockForecast />} />
+                  <Route path="autopilot" element={<AutopilotRecommendations />} />
+                </Route>
+                <Route path="/analytics" element={<AnalyticsModuleLayout />}>
+                  <Route index element={<Analytics />} />
+                  <Route path="anomalies" element={<AnomaliesPage />} />
+                </Route>
               </Routes>
             </Layout>
           </ProtectedRoute>

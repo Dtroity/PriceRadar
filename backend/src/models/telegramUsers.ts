@@ -46,13 +46,27 @@ export async function setTelegramUserAllowed(telegramId: string, isAllowed: bool
   );
 }
 
+/** super_admin с organizationId в JWT — привязывает пользователя к этой организации */
+export async function setTelegramUserAllowedWithOrg(
+  telegramId: string,
+  isAllowed: boolean,
+  organizationId: string
+): Promise<void> {
+  await pool.query(
+    'UPDATE telegram_users SET is_allowed = $1, organization_id = $2 WHERE telegram_id = $3',
+    [isAllowed, organizationId, telegramId]
+  );
+}
+
 export async function setTelegramUserAllowedForOrganization(
   organizationId: string,
   telegramId: string,
   isAllowed: boolean
 ): Promise<void> {
   await pool.query(
-    'UPDATE telegram_users SET is_allowed = $1 WHERE organization_id = $2 AND telegram_id = $3',
+    `UPDATE telegram_users
+     SET is_allowed = $1, organization_id = $2
+     WHERE telegram_id = $3`,
     [isAllowed, organizationId, telegramId]
   );
 }

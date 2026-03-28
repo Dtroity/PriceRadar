@@ -141,27 +141,6 @@ export default function Analytics() {
         </div>
       </div>
 
-      <div className="flex gap-2 border-b border-slate-200">
-        {(
-          [
-            ['history', 'Динамика цен'],
-            ['suppliers', 'Поставщики'],
-            ['summary', 'Сводка'],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-              tab === id ? 'border-slate-800 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-            onClick={() => setTab(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
       {tab === 'history' && (
         <div className="space-y-4">
           <div className="flex flex-wrap gap-3 items-center">

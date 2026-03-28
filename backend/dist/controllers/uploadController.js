@@ -12,6 +12,11 @@ export async function upload(req, res) {
         }
         const authReq = req;
         const organizationId = authReq.user?.organizationId;
+        if (!organizationId) {
+            return res.status(400).json({
+                error: 'Для загрузки прайса нужна организация в сессии. Войдите с указанием workspace (slug) или проверьте JWT.',
+            });
+        }
         const job = await uploadQueue.add('process', {
             filePath: file.path,
             supplierName,

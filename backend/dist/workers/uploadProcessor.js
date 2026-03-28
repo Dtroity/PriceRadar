@@ -1,5 +1,4 @@
 import { runParserPipeline } from '../ai/parserPipeline.js';
-import * as suppliersModel from '../models/suppliers.js';
 import * as priceListsModel from '../models/priceLists.js';
 import * as pricesModel from '../models/prices.js';
 import { compareAndSaveChanges } from '../services/priceComparison.js';
@@ -7,11 +6,22 @@ import { notifyPriceChange } from '../services/telegramNotify.js';
 import { recordFromPriceList } from '../services/supplierPricesHistory.js';
 import { matchProductForRow } from '../product-matching/matchingService.js';
 import path from 'path';
+import { config } from '../config.js';
+import { logger } from '../utils/logger.js';
 function resolveFilePath(filePath) {
     return path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath);
 }
 export async function processUploadJob(job) {
     const { filePath, supplierName, sourceType, mimeType, originalName } = job.data;
+    const organizationId = job.data.organizationId;
+    if (!organizationId) {
+        const msg = config.multiTenant
+            ? 'Прайс не обработан: нет organizationId. Войдите в веб с workspace или привяжите Telegram-пользователя к организации (Настройки → Telegram).'
+            : 'Прайс не обработан: organizationId обязателен для записи в price_lists.';
+        logger.error({ jobId: job.id, originalName }, msg);
+        await job.log(msg);
+        throw new Error(msg);
+    }
     const absPath = resolveFilePath(filePath);
     const rows = await runParserPipeline({
         filePath: absPath,
@@ -19,13 +29,12 @@ export async function processUploadJob(job) {
         originalName,
     });
     if (rows.length === 0) {
-        job.log('No rows parsed');
-        return;
+        const msg = `Файл разобран, но строк с ценами не найдено: ${originalName}`;
+        logger.warn({ jobId: job.id, originalName }, msg);
+        await job.log(msg);
+        throw new Error(msg);
     }
-    const organizationId = job.data.organizationId;
-    const supplier = organizationId
-        ? await import('../models/suppliers-mt.js').then((m) => m.findOrCreate(organizationId, supplierName))
-        : await suppliersModel.findOrCreateSupplier(supplierName);
+    const supplier = await import('../models/suppliers-mt.js').then((m) => m.findOrCreate(organizationId, supplierName));
     const uploadDate = new Date();
     const priceList = await priceListsModel.createPriceList(supplier.id, uploadDate, sourceType, filePath, organizationId);
     const priceItems = [];
@@ -50,5 +59,7 @@ export async function processUploadJob(job) {
     for (const ch of changes) {
         await notifyPriceChange(supplierName, ch.productName, ch.oldPrice, ch.newPrice, ch.changePercent, ch.isPriority);
     }
-    job.log(`Processed ${rows.length} rows, ${changes.length} changes`);
+    const done = `Processed ${rows.length} rows, ${changes.length} changes`;
+    await job.log(done);
+    logger.info({ jobId: job.id, originalName, rows: rows.length, changes: changes.length }, done);
 }

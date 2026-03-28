@@ -21,8 +21,14 @@ export async function createTelegramUser(telegramId, username, isAllowed = false
 export async function setTelegramUserAllowed(telegramId, isAllowed) {
     await pool.query('UPDATE telegram_users SET is_allowed = $1 WHERE telegram_id = $2', [isAllowed, telegramId]);
 }
+/** super_admin с organizationId в JWT — привязывает пользователя к этой организации */
+export async function setTelegramUserAllowedWithOrg(telegramId, isAllowed, organizationId) {
+    await pool.query('UPDATE telegram_users SET is_allowed = $1, organization_id = $2 WHERE telegram_id = $3', [isAllowed, organizationId, telegramId]);
+}
 export async function setTelegramUserAllowedForOrganization(organizationId, telegramId, isAllowed) {
-    await pool.query('UPDATE telegram_users SET is_allowed = $1 WHERE organization_id = $2 AND telegram_id = $3', [isAllowed, organizationId, telegramId]);
+    await pool.query(`UPDATE telegram_users
+     SET is_allowed = $1, organization_id = $2
+     WHERE telegram_id = $3`, [isAllowed, organizationId, telegramId]);
 }
 export async function setTelegramUserRole(id, role) {
     await pool.query('UPDATE telegram_users SET role = $1 WHERE id = $2', [role, id]);

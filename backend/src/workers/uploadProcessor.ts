@@ -1,7 +1,5 @@
 import type { Job } from 'bullmq';
 import { runParserPipeline } from '../ai/parserPipeline.js';
-import * as suppliersModel from '../models/suppliers.js';
-import * as productsModel from '../models/products.js';
 import * as priceListsModel from '../models/priceLists.js';
 import * as pricesModel from '../models/prices.js';
 import { compareAndSaveChanges } from '../services/priceComparison.js';
@@ -11,6 +9,8 @@ import type { SourceType } from '../types/index.js';
 import { matchProductForRow } from '../product-matching/matchingService.js';
 import { readFile } from 'fs/promises';
 import path from 'path';
+import { config } from '../config.js';
+import { logger } from '../utils/logger.js';
 
 function resolveFilePath(filePath: string): string {
   return path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath);
@@ -27,6 +27,17 @@ export interface UploadJobPayload {
 
 export async function processUploadJob(job: Job<UploadJobPayload>): Promise<void> {
   const { filePath, supplierName, sourceType, mimeType, originalName } = job.data;
+  const organizationId = job.data.organizationId;
+
+  if (!organizationId) {
+    const msg = config.multiTenant
+      ? 'Прайс не обработан: нет organizationId. Войдите в веб с workspace или привяжите Telegram-пользователя к организации (Настройки → Telegram).'
+      : 'Прайс не обработан: organizationId обязателен для записи в price_lists.';
+    logger.error({ jobId: job.id, originalName }, msg);
+    await job.log(msg);
+    throw new Error(msg);
+  }
+
   const absPath = resolveFilePath(filePath);
   const rows = await runParserPipeline({
     filePath: absPath,
@@ -34,14 +45,15 @@ export async function processUploadJob(job: Job<UploadJobPayload>): Promise<void
     originalName,
   });
   if (rows.length === 0) {
-    job.log('No rows parsed');
-    return;
+    const msg = `Файл разобран, но строк с ценами не найдено: ${originalName}`;
+    logger.warn({ jobId: job.id, originalName }, msg);
+    await job.log(msg);
+    throw new Error(msg);
   }
 
-  const organizationId = job.data.organizationId;
-  const supplier = organizationId
-    ? await import('../models/suppliers-mt.js').then((m) => m.findOrCreate(organizationId, supplierName))
-    : await suppliersModel.findOrCreateSupplier(supplierName);
+  const supplier = await import('../models/suppliers-mt.js').then((m) =>
+    m.findOrCreate(organizationId, supplierName)
+  );
   const uploadDate = new Date();
   const priceList = await priceListsModel.createPriceList(
     supplier.id,
@@ -88,5 +100,7 @@ export async function processUploadJob(job: Job<UploadJobPayload>): Promise<void
     );
   }
 
-  job.log(`Processed ${rows.length} rows, ${changes.length} changes`);
+  const done = `Processed ${rows.length} rows, ${changes.length} changes`;
+  await job.log(done);
+  logger.info({ jobId: job.id, originalName, rows: rows.length, changes: changes.length }, done);
 }

@@ -7,6 +7,7 @@ import { uploadQueue } from '../workers/queue.js';
 import { pool } from '../db/pool.js';
 import path from 'path';
 import fs from 'fs/promises';
+import { logger } from '../utils/logger.js';
 const ACCESS_DENIED = 'Access denied.\nContact administrator.';
 async function telegramSupplierSummary(organizationId) {
     if (!organizationId)
@@ -43,10 +44,13 @@ async function telegramPriceAlertsSummary(organizationId) {
 }
 export function startTelegramBot() {
     if (!config.telegram.botToken || !config.telegram.enabled) {
-        console.log('Telegram bot disabled (no token or disabled in config)');
+        logger.info('Telegram bot disabled (no token or TELEGRAM_BOT_ENABLED=false)');
         return null;
     }
     const bot = new TelegramBot(config.telegram.botToken, { polling: true });
+    bot.on('polling_error', (err) => {
+        logger.error({ err: err?.message, code: err?.code, stack: err?.stack }, 'Telegram polling_error — проверьте токен, сеть (доступ к api.telegram.org) и что нет второго экземпляра бота с polling');
+    });
     bot.onText(/\/start/, async (msg) => {
         const chatId = msg.chat.id;
         const telegramId = String(msg.from?.id);
@@ -89,14 +93,22 @@ export function startTelegramBot() {
             const destPath = path.join(config.upload.dir, `tg_${Date.now()}${ext}`);
             const stream = bot.getFileStream(fileId);
             await pipeline(stream, createWriteStream(destPath));
+            const orgId = user.organization_id && String(user.organization_id).trim() !== ''
+                ? String(user.organization_id)
+                : undefined;
+            if (!orgId) {
+                await bot.sendMessage(chatId, 'Файл не может быть обработан: ваш Telegram ещё не привязан к организации. Администратор должен разрешить доступ в веб-интерфейсе: Настройки → Telegram.');
+                return;
+            }
             await uploadQueue.add('process', {
                 filePath: destPath,
                 supplierName: 'Telegram Upload',
                 sourceType: 'telegram',
                 mimeType: msg.document?.mime_type || 'application/octet-stream',
                 originalName: msg.document?.file_name || `document${ext}`,
+                organizationId: orgId,
             }, { attempts: 2 });
-            await bot.sendMessage(chatId, 'File received. Processing started.');
+            await bot.sendMessage(chatId, 'Файл принят, прайс поставлен в очередь на разбор.');
         }
         catch (err) {
             console.error('Telegram document handling:', err);
@@ -152,20 +164,28 @@ export function startTelegramBot() {
             const destPath = path.join(config.upload.dir, `tg_photo_${Date.now()}.jpg`);
             const stream = bot.getFileStream(photo.file_id);
             await pipeline(stream, createWriteStream(destPath));
+            const orgId = user.organization_id && String(user.organization_id).trim() !== ''
+                ? String(user.organization_id)
+                : undefined;
+            if (!orgId) {
+                await bot.sendMessage(chatId, 'Фото не обработано: привяжите Telegram к организации (Настройки → Telegram в веб-интерфейсе).');
+                return;
+            }
             await uploadQueue.add('process', {
                 filePath: destPath,
                 supplierName: 'Telegram Upload',
                 sourceType: 'telegram',
                 mimeType: 'image/jpeg',
                 originalName: `photo_${Date.now()}.jpg`,
+                organizationId: orgId,
             }, { attempts: 2 });
-            await bot.sendMessage(chatId, 'Photo received. OCR processing may be available in a future update.');
+            await bot.sendMessage(chatId, 'Фото принято, поставлено в очередь на разбор.');
         }
         catch (err) {
             console.error('Telegram photo handling:', err);
             await bot.sendMessage(chatId, 'Failed to process photo.');
         }
     });
-    console.log('Telegram bot started');
+    logger.info('Telegram bot started (long polling)');
     return bot;
 }

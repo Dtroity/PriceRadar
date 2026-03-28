@@ -121,30 +121,6 @@ export default function Procurement() {
           <p className="text-sm text-slate-600">{t('procurement.hubSubtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link
-            to="/procurement/orders"
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
-          >
-            Все заявки
-          </Link>
-          <Link
-            to="/procurement/suppliers"
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
-          >
-            Поставщики
-          </Link>
-          <Link
-            to="/procurement/rules"
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
-          >
-            Фильтры товаров
-          </Link>
-          <Link
-            to="/procurement/recommendations"
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
-          >
-            {t('procurement.aiRecommendationsLink')}
-          </Link>
           <button
             type="button"
             onClick={() => void newOrder()}

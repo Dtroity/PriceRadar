@@ -34,7 +34,15 @@ export async function allowUser(req: AuthRequest, res: Response) {
     const { telegramId } = req.params;
     const { isAllowed } = req.body as { isAllowed?: boolean };
     if (role === 'super_admin') {
-      await telegramUsersModel.setTelegramUserAllowed(telegramId, Boolean(isAllowed));
+      if (organizationId) {
+        await telegramUsersModel.setTelegramUserAllowedWithOrg(
+          telegramId,
+          Boolean(isAllowed),
+          organizationId
+        );
+      } else {
+        await telegramUsersModel.setTelegramUserAllowed(telegramId, Boolean(isAllowed));
+      }
     } else {
       if (!organizationId) return res.status(403).json({ error: 'Organization scope required' });
       await telegramUsersModel.setTelegramUserAllowedForOrganization(organizationId, telegramId, Boolean(isAllowed));

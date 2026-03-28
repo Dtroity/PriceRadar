@@ -1,14 +1,11 @@
 import { pool } from '../db/pool.js';
 export async function createPriceList(supplierId, uploadDate, sourceType, filePath, organizationId) {
-    if (organizationId) {
-        const { rows } = await pool.query(`INSERT INTO price_lists (organization_id, supplier_id, upload_date, source_type, file_path)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, supplier_id, upload_date, source_type, file_path, created_at`, [organizationId, supplierId, uploadDate, sourceType, filePath]);
-        return rows[0];
+    if (!organizationId) {
+        throw new Error('createPriceList: organizationId is required');
     }
-    const { rows } = await pool.query(`INSERT INTO price_lists (supplier_id, upload_date, source_type, file_path)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id, supplier_id, upload_date, source_type, file_path, created_at`, [supplierId, uploadDate, sourceType, filePath]);
+    const { rows } = await pool.query(`INSERT INTO price_lists (organization_id, supplier_id, upload_date, source_type, file_path)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, supplier_id, upload_date, source_type, file_path, created_at`, [organizationId, supplierId, uploadDate, sourceType, filePath]);
     return rows[0];
 }
 export async function getLatestPriceListBySupplier(supplierId) {

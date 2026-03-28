@@ -45,7 +45,8 @@ services:
       UPLOAD_DIR: /app/uploads
       FRONTEND_URL: http://localhost:5173
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      TELEGRAM_BOT_ENABLED: ${TELEGRAM_BOT_ENABLED:-false}
+      # Если нужно выключить бота при заданном токене: TELEGRAM_BOT_ENABLED=false в .env
+      TELEGRAM_BOT_ENABLED: ${TELEGRAM_BOT_ENABLED:-}
       GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-/app/keys/google.json}
       YANDEX_API_KEY: ${YANDEX_API_KEY:-}
       YANDEX_FOLDER_ID: ${YANDEX_FOLDER_ID:-}

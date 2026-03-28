@@ -195,7 +195,7 @@ export default function NotificationsSettings() {
         <h2 className="font-medium text-amber-900">Telegram (legacy)</h2>
         <p className="text-sm text-amber-900/90">
           Telegram может быть недоступен в РФ. Рекомендуем Email или VK Notify. Настройки — в разделе{' '}
-          <Link to="/telegram" className="underline">
+          <Link to="/settings/telegram" className="underline">
             Telegram
           </Link>
           .

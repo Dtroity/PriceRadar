@@ -17,9 +17,21 @@ export function startWorkers() {
     uploadWorker.on('failed', (job, err) => {
         logger.error({ err, jobId: job?.id }, 'Upload job failed');
     });
+    uploadWorker.on('completed', (job) => {
+        logger.info({ jobId: job?.id }, 'Upload job completed');
+    });
+    uploadWorker.on('error', (err) => {
+        logger.error({ err }, 'Upload worker error');
+    });
     documentWorker = new Worker('documents', async (job) => processDocumentJob(job), { connection, concurrency: 2 });
     documentWorker.on('failed', (job, err) => {
         logger.error({ err, jobId: job?.id }, 'Document job failed');
+    });
+    documentWorker.on('completed', (job) => {
+        logger.info({ jobId: job?.id }, 'Document job completed');
+    });
+    documentWorker.on('error', (err) => {
+        logger.error({ err }, 'Document worker error');
     });
     return uploadWorker;
 }

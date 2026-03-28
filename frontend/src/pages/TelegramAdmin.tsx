@@ -112,9 +112,20 @@ export default function TelegramAdmin() {
       </div>
       <h1 className="text-xl font-semibold text-slate-800">{t('telegram.title')}</h1>
       {status && (
-        <p className="text-sm text-slate-600">
-          {t('telegram.botStatus')}: {status.enabled ? t('telegram.enabled') : t('telegram.disabled')}
-        </p>
+        <div className="space-y-2 text-sm text-slate-600">
+          <p>
+            {t('telegram.botStatus')}: {status.enabled ? t('telegram.enabled') : t('telegram.disabled')}
+          </p>
+          {!status.enabled && (
+            <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-slate-700">
+              Бот на сервере выключен или нет токена. В <code className="rounded bg-slate-200 px-1">.env</code> укажите{' '}
+              <code className="rounded bg-slate-200 px-1">TELEGRAM_BOT_TOKEN</code> (или{' '}
+              <code className="rounded bg-slate-200 px-1">TELEGRAM_TOKEN</code>
+              ), пересоберите backend. Чтобы явно отключить бота при наличии токена:{' '}
+              <code className="rounded bg-slate-200 px-1">TELEGRAM_BOT_ENABLED=false</code>.
+            </p>
+          )}
+        </div>
       )}
       <p className="text-sm text-slate-500">
         {t('telegram.usersDescription')}

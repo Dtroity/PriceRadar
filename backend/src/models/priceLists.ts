@@ -8,20 +8,14 @@ export async function createPriceList(
   filePath: string | null,
   organizationId?: string
 ): Promise<PriceList> {
-  if (organizationId) {
-    const { rows } = await pool.query(
-      `INSERT INTO price_lists (organization_id, supplier_id, upload_date, source_type, file_path)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, supplier_id, upload_date, source_type, file_path, created_at`,
-      [organizationId, supplierId, uploadDate, sourceType, filePath]
-    );
-    return rows[0];
+  if (!organizationId) {
+    throw new Error('createPriceList: organizationId is required');
   }
   const { rows } = await pool.query(
-    `INSERT INTO price_lists (supplier_id, upload_date, source_type, file_path)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO price_lists (organization_id, supplier_id, upload_date, source_type, file_path)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING id, supplier_id, upload_date, source_type, file_path, created_at`,
-    [supplierId, uploadDate, sourceType, filePath]
+    [organizationId, supplierId, uploadDate, sourceType, filePath]
   );
   return rows[0];
 }

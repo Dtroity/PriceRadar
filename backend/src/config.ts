@@ -2,6 +2,25 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+function firstNonEmpty(...vals: (string | undefined)[]): string {
+  for (const v of vals) {
+    const t = v?.trim();
+    if (t) return t;
+  }
+  return '';
+}
+
+const telegramBotToken = firstNonEmpty(
+  process.env.TELEGRAM_BOT_TOKEN,
+  process.env.TELEGRAM_TOKEN,
+  process.env.TELEGRAM_API_TOKEN,
+  process.env.BOT_TOKEN
+);
+
+/** If token is set, bot runs unless TELEGRAM_BOT_ENABLED=false. If no token, never run. */
+const telegramExplicitDisabled = process.env.TELEGRAM_BOT_ENABLED === 'false';
+const telegramEnabled = Boolean(telegramBotToken) && !telegramExplicitDisabled;
+
 export const config = {
   port: parseInt(process.env.PORT ?? '3001', 10),
   jwt: {
@@ -16,8 +35,8 @@ export const config = {
     password: process.env.REDIS_PASSWORD ?? undefined,
   },
   telegram: {
-    botToken: process.env.TELEGRAM_BOT_TOKEN ?? '',
-    enabled: process.env.TELEGRAM_BOT_ENABLED !== 'false',
+    botToken: telegramBotToken,
+    enabled: telegramEnabled,
   },
   upload: {
     dir: process.env.UPLOAD_DIR ?? './uploads',

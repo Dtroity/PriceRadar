@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../auth/AuthContext';
 import { useLocale } from '../../i18n/LocaleContext';
 import { cn } from '../../lib/cn';
 
@@ -10,31 +9,19 @@ type Props = {
 
 /** Нижний drawer «Ещё» — второстепенные разделы (мобильный + планшет). */
 export default function MoreMenuDrawer({ open, onClose }: Props) {
-  const { user } = useAuth();
   const { t } = useLocale();
 
   if (!open) return null;
 
   const links: { to: string; label: string }[] = [
     { to: '/products', label: t('nav.products') },
-    { to: '/analytics/anomalies', label: 'Аномалии' },
-    { to: '/procurement/suppliers', label: t('nav.suppliers') },
-    { to: '/procurement/rules', label: 'Фильтры товаров' },
+    { to: '/analytics', label: t('nav.analytics') },
     { to: '/prices', label: t('nav.prices') },
     { to: '/forecast', label: t('nav.forecast') },
     { to: '/foodcost', label: t('nav.foodcost') },
     { to: '/stock', label: t('nav.stock') },
     { to: '/settings', label: t('nav.settings') },
-    { to: '/settings/notifications', label: 'Уведомления' },
-    { to: '/settings/integrations', label: t('nav.integrations') },
   ];
-
-  if (user?.role === 'super_admin' || user?.role === 'org_admin') {
-    links.push({ to: '/settings/telegram', label: t('nav.telegram') });
-  }
-  if (user?.role === 'super_admin') {
-    links.push({ to: '/settings/admin', label: 'Админ платформы' });
-  }
 
   return (
     <>
