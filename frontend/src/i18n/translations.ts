@@ -68,6 +68,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ingestion.colSummary': 'Кратко',
     'ingestion.duplicateBadge': 'Дубликат',
     'ingestion.rows': 'Строк',
+    'ingestion.summaryChanges': 'Изменений цен',
+    'ingestion.summaryFirstPriceList':
+      'Первый прайс этого поставщика: строки сохранены; в ленту изменений попадают только отличия от предыдущего файла.',
     'ingestion.lines': 'Строк',
     'ingestion.openDoc': 'Документ',
     'ingestion.delete': 'Удалить',
@@ -408,6 +411,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ingestion.colSummary': 'Summary',
     'ingestion.duplicateBadge': 'Duplicate',
     'ingestion.rows': 'Rows',
+    'ingestion.summaryChanges': 'Price changes',
+    'ingestion.summaryFirstPriceList':
+      'First price list for this supplier: rows are saved; the change feed only records differences from the previous upload.',
     'ingestion.lines': 'Lines',
     'ingestion.openDoc': 'Document',
     'ingestion.delete': 'Delete',

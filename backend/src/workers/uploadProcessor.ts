@@ -89,7 +89,7 @@ export async function processUploadJob(job: Job<UploadJobPayload>): Promise<void
       }
     }
 
-    const { changes } = await compareAndSaveChanges(
+    const { changes, hadPreviousPriceList } = await compareAndSaveChanges(
       supplier.id,
       priceList.id,
       uploadDate,
@@ -116,6 +116,7 @@ export async function processUploadJob(job: Job<UploadJobPayload>): Promise<void
           changes: changes.length,
           supplierName: supplier.name,
           supplierId: supplier.id,
+          hadPreviousPriceList,
         },
         error_message: null,
       });

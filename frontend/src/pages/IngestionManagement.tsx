@@ -107,15 +107,41 @@ export default function IngestionManagement() {
                       <td className="px-3 py-2 text-slate-600">
                         {row.confirmedKind || row.suggestedKind}
                       </td>
-                      <td className="max-w-[220px] truncate px-3 py-2 text-slate-600">
-                        {row.errorMessage ||
-                          (typeof row.summary?.rows === 'number'
-                            ? `${t('ingestion.rows')}: ${row.summary.rows}`
-                            : '') ||
-                          (typeof row.summary?.line_items === 'number'
-                            ? `${t('ingestion.lines')}: ${row.summary.line_items}`
-                            : '') ||
-                          '—'}
+                      <td className="max-w-[280px] px-3 py-2 text-xs text-slate-600">
+                        {row.errorMessage ? (
+                          <span className="text-red-800">{row.errorMessage}</span>
+                        ) : (
+                          <div className="space-y-1">
+                            {typeof row.summary?.rows === 'number' && (
+                              <div>
+                                {t('ingestion.rows')}: {row.summary.rows}
+                                {typeof row.summary?.changes === 'number' && (
+                                  <>
+                                    {' '}
+                                    · {t('ingestion.summaryChanges')}: {row.summary.changes}
+                                  </>
+                                )}
+                              </div>
+                            )}
+                            {typeof row.summary?.line_items === 'number' && (
+                              <div>
+                                {t('ingestion.lines')}: {row.summary.line_items}
+                              </div>
+                            )}
+                            {row.summary?.hadPreviousPriceList === false &&
+                              Number(row.summary?.changes) === 0 &&
+                              typeof row.summary?.rows === 'number' &&
+                              row.summary.rows > 0 && (
+                                <p className="text-[11px] leading-snug text-amber-950">
+                                  {t('ingestion.summaryFirstPriceList')}
+                                </p>
+                              )}
+                            {!row.summary?.rows &&
+                              !row.summary?.line_items &&
+                              !row.errorMessage &&
+                              '—'}
+                          </div>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-right whitespace-nowrap">
                         {row.documentId && !isEmployee && (

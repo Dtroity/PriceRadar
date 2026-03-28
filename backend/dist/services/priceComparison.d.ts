@@ -8,6 +8,8 @@ export interface ComparisonResult {
         changePercent: number;
         isPriority: boolean;
     }>;
+    /** Был ли более ранний прайс этого поставщика — без него дельты в price_changes не создаются */
+    hadPreviousPriceList: boolean;
 }
 /**
  * After saving new price list and prices:

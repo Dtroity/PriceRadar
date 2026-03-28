@@ -60,7 +60,7 @@ export async function processUploadJob(job) {
                 job.log('supplier_prices_history record failed: ' + (e instanceof Error ? e.message : ''));
             }
         }
-        const { changes } = await compareAndSaveChanges(supplier.id, priceList.id, uploadDate, job.data.organizationId);
+        const { changes, hadPreviousPriceList } = await compareAndSaveChanges(supplier.id, priceList.id, uploadDate, job.data.organizationId);
         for (const ch of changes) {
             await notifyPriceChange(supplierName, ch.productName, ch.oldPrice, ch.newPrice, ch.changePercent, ch.isPriority);
         }
@@ -73,6 +73,7 @@ export async function processUploadJob(job) {
                     changes: changes.length,
                     supplierName: supplier.name,
                     supplierId: supplier.id,
+                    hadPreviousPriceList,
                 },
                 error_message: null,
             });

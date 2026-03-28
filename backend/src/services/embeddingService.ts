@@ -5,6 +5,8 @@
 import { pool } from '../db/pool.js';
 import { logger } from '../utils/logger.js';
 
+let loggedYandexEmbed403 = false;
+
 const YANDEX_EMBED_URL = 'https://llm.api.cloud.yandex.net/foundationModels/v1/textEmbedding';
 
 function embedModelUri(): string {
@@ -55,12 +57,21 @@ export async function getEmbedding(text: string): Promise<number[] | null> {
     });
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
+      if (res.status === 403 && !loggedYandexEmbed403) {
+        loggedYandexEmbed403 = true;
+        logger.warn(
+          { status: res.status },
+          'Yandex embeddings недоступны (403/права каталога): сопоставление товаров работает без векторов; задайте роль сервисного аккаунта на каталог или отключите YANDEX_*'
+        );
+      }
       throw new Error(`Yandex Embed API: ${res.status} ${errText}`);
     }
     const data = await res.json();
     return parseEmbeddingPayload(data);
   } catch (err) {
-    logger.error({ err }, 'Yandex embedding failed');
+    if (!(err instanceof Error) || !err.message.includes('Yandex Embed API: 403')) {
+      logger.error({ err }, 'Yandex embedding failed');
+    }
     return null;
   }
 }

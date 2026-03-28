@@ -14,6 +14,8 @@ export interface ComparisonResult {
     changePercent: number;
     isPriority: boolean;
   }>;
+  /** Был ли более ранний прайс этого поставщика — без него дельты в price_changes не создаются */
+  hadPreviousPriceList: boolean;
 }
 
 /**
@@ -32,7 +34,7 @@ export async function compareAndSaveChanges(
     uploadDate,
     organizationId
   );
-  if (!previousList) return { changes: [] };
+  if (!previousList) return { changes: [], hadPreviousPriceList: false };
 
   const oldPrices = await pricesModel.getPricesByPriceListId(previousList.id);
   const newPrices = await pricesModel.getPricesByPriceListId(newPriceListId);
@@ -72,5 +74,5 @@ export async function compareAndSaveChanges(
     });
   }
 
-  return { changes };
+  return { changes, hadPreviousPriceList: true };
 }

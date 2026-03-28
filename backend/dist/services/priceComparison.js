@@ -11,7 +11,7 @@ import { foodcostRecalcQueue } from '../modules/foodcost/worker.js';
 export async function compareAndSaveChanges(supplierId, newPriceListId, uploadDate, organizationId) {
     const previousList = await priceListsModel.getPreviousPriceList(supplierId, uploadDate, organizationId);
     if (!previousList)
-        return { changes: [] };
+        return { changes: [], hadPreviousPriceList: false };
     const oldPrices = await pricesModel.getPricesByPriceListId(previousList.id);
     const newPrices = await pricesModel.getPricesByPriceListId(newPriceListId);
     const oldByProductId = new Map(oldPrices.map((p) => [p.product_id, p.price]));
@@ -41,5 +41,5 @@ export async function compareAndSaveChanges(supplierId, newPriceListId, uploadDa
             isPriority,
         });
     }
-    return { changes };
+    return { changes, hadPreviousPriceList: true };
 }
