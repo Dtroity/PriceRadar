@@ -9,6 +9,7 @@ import path from 'path';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
 import * as ingestionJobs from '../models/ingestionJobs.js';
+import { inferSupplierForPriceUpload } from '../services/supplierFromPriceFile.js';
 function resolveFilePath(filePath) {
     return path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath);
 }
@@ -39,7 +40,15 @@ export async function processUploadJob(job) {
             await job.log(msg);
             throw new Error(msg);
         }
-        const supplier = await import('../models/suppliers-mt.js').then((m) => m.findOrCreate(organizationId, supplierName));
+        let resolvedSupplier = supplierName.trim();
+        if (!resolvedSupplier || resolvedSupplier.toLowerCase() === 'unknown supplier') {
+            const inferred = await inferSupplierForPriceUpload(absPath, mimeType, originalName);
+            if (inferred?.trim())
+                resolvedSupplier = inferred.trim();
+            else if (!resolvedSupplier)
+                resolvedSupplier = 'Unknown Supplier';
+        }
+        const supplier = await import('../models/suppliers-mt.js').then((m) => m.findOrCreate(organizationId, resolvedSupplier));
         const uploadDate = new Date();
         const priceList = await priceListsModel.createPriceList(supplier.id, uploadDate, sourceType, filePath, organizationId);
         const priceItems = [];
@@ -62,7 +71,7 @@ export async function processUploadJob(job) {
         }
         const { changes, hadPreviousPriceList } = await compareAndSaveChanges(supplier.id, priceList.id, uploadDate, job.data.organizationId);
         for (const ch of changes) {
-            await notifyPriceChange(supplierName, ch.productName, ch.oldPrice, ch.newPrice, ch.changePercent, ch.isPriority);
+            await notifyPriceChange(supplier.name, ch.productName, ch.oldPrice, ch.newPrice, ch.changePercent, ch.isPriority);
         }
         if (ingestionJobId) {
             await ingestionJobs.updateIngestionJob(ingestionJobId, organizationId, {

@@ -12,6 +12,7 @@ import path from 'path';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
 import * as ingestionJobs from '../models/ingestionJobs.js';
+import { inferSupplierForPriceUpload } from '../services/supplierFromPriceFile.js';
 
 function resolveFilePath(filePath: string): string {
   return path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath);
@@ -58,8 +59,15 @@ export async function processUploadJob(job: Job<UploadJobPayload>): Promise<void
       throw new Error(msg);
     }
 
+    let resolvedSupplier = supplierName.trim();
+    if (!resolvedSupplier || resolvedSupplier.toLowerCase() === 'unknown supplier') {
+      const inferred = await inferSupplierForPriceUpload(absPath, mimeType, originalName);
+      if (inferred?.trim()) resolvedSupplier = inferred.trim();
+      else if (!resolvedSupplier) resolvedSupplier = 'Unknown Supplier';
+    }
+
     const supplier = await import('../models/suppliers-mt.js').then((m) =>
-      m.findOrCreate(organizationId, supplierName)
+      m.findOrCreate(organizationId, resolvedSupplier)
     );
     const uploadDate = new Date();
     const priceList = await priceListsModel.createPriceList(
@@ -98,7 +106,7 @@ export async function processUploadJob(job: Job<UploadJobPayload>): Promise<void
 
     for (const ch of changes) {
       await notifyPriceChange(
-        supplierName,
+        supplier.name,
         ch.productName,
         ch.oldPrice,
         ch.newPrice,
