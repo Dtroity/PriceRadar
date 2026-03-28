@@ -11,6 +11,7 @@ import {
   type PriceHistoryResponse,
   type PriceSummaryResponse,
 } from '../api/analyticsClient';
+import { displayProductName } from '../lib/displayProductName';
 import PriceHistoryChart from '../components/analytics/PriceHistoryChart';
 import PriceSummaryCards from '../components/analytics/PriceSummaryCards';
 import SupplierRankingTable from '../components/analytics/SupplierRankingTable';
@@ -152,7 +153,7 @@ export default function Analytics() {
                   className="min-h-[48px] w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-left text-sm font-medium text-slate-800 shadow-sm"
                 >
                   {productId
-                    ? products.find((p) => p.id === productId)?.name ?? 'Товар'
+                    ? displayProductName(products.find((p) => p.id === productId)?.name) || 'Товар'
                     : '— выберите товар —'}
                 </button>
                 {productPickerOpen && (
@@ -196,7 +197,7 @@ export default function Analytics() {
                               setProductPickerOpen(false);
                             }}
                           >
-                            {p.name}
+                            {displayProductName(p.name)}
                           </button>
                         ))}
                       </div>
@@ -230,7 +231,7 @@ export default function Analytics() {
                   <option value="">— выберите —</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name}
+                      {displayProductName(p.name)}
                     </option>
                   ))}
                 </select>

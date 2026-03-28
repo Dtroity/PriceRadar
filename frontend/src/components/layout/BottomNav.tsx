@@ -48,9 +48,9 @@ export default function BottomNav() {
           <IconCart />
           <span>Заказ</span>
         </NavLink>
-        <NavLink to="/ingestion" className={itemClass}>
+        <NavLink to="/documents" className={itemClass}>
           <IconFileText />
-          <span>{t('nav.bottom.ingestion')}</span>
+          <span>{t('nav.bottom.documents')}</span>
         </NavLink>
       </nav>
     );

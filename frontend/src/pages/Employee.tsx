@@ -61,7 +61,7 @@ export default function EmployeePage() {
         <Logo size="sm" />
         <div className="flex flex-col items-end gap-1 text-right">
           <Link
-            to="/ingestion"
+            to="/documents"
             className="text-sm font-medium text-amber-800 underline hover:text-amber-950"
           >
             {t('employee.ingestionLink')}

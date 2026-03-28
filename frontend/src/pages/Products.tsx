@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { api, type Product, type ProductAuditEntry, type ProductNormalizationItem } from '../api/client';
 import { useT } from '../i18n/LocaleContext';
+import { displayProductName } from '../lib/displayProductName';
 
 export default function Products() {
   const t = useT();
@@ -151,7 +152,9 @@ export default function Products() {
     setDupError('');
     try {
       await api.productsMerge([newer.id], older.id);
-      setDupMessage(`Объединено: ${newer.name} → ${older.name}`);
+      setDupMessage(
+        `Объединено: ${displayProductName(newer.name)} → ${displayProductName(older.name)}`
+      );
       await loadDuplicates();
       await loadProducts();
     } catch (e) {
@@ -203,7 +206,7 @@ export default function Products() {
               <option value="">—</option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name}
+                  {displayProductName(p.name)}
                 </option>
               ))}
             </select>
@@ -245,8 +248,8 @@ export default function Products() {
                     />
                   </td>
                   <td className="p-2 font-mono text-xs text-slate-500">{p.id.slice(0, 8)}…</td>
-                  <td className="p-2">{p.name}</td>
-                  <td className="p-2 text-slate-600">{p.normalized_name}</td>
+                  <td className="p-2">{displayProductName(p.name)}</td>
+                  <td className="p-2 text-slate-600">{displayProductName(p.normalized_name)}</td>
                 </tr>
               ))}
               {!products.length && (
@@ -299,8 +302,8 @@ export default function Products() {
             <tbody>
               {duplicatePairs.map((row, i) => (
                 <tr key={`${row.product1.id}-${row.product2.id}-${i}`} className="border-b border-slate-100">
-                  <td className="p-2">{row.product1.name}</td>
-                  <td className="p-2">{row.product2.name}</td>
+                  <td className="p-2">{displayProductName(row.product1.name)}</td>
+                  <td className="p-2">{displayProductName(row.product2.name)}</td>
                   <td className="p-2 text-right">{row.similarity.toFixed(3)}</td>
                   <td className="p-2">
                     <button
@@ -337,7 +340,7 @@ export default function Products() {
             <option value="">— выберите товар —</option>
             {products.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name}
+                {displayProductName(p.name)}
               </option>
             ))}
           </select>
@@ -415,8 +418,8 @@ export default function Products() {
                       }
                     />
                   </td>
-                  <td className="p-2">{item.raw_name}</td>
-                  <td className="p-2">{item.normalized_name}</td>
+                  <td className="p-2">{displayProductName(item.raw_name)}</td>
+                  <td className="p-2">{displayProductName(item.normalized_name)}</td>
                   <td className="p-2 text-right">{item.usage_count}</td>
                 </tr>
               ))}

@@ -1,3 +1,7 @@
+/** Убирает типичный мусор из ячеек Excel (ведущие слэши, пробелы). */
+export function sanitizeRawProductName(name) {
+    return name.replace(/^[\s/\\]+/u, '').trim();
+}
 /**
  * Normalize product name for matching across suppliers.
  * - lowercase
@@ -20,10 +24,12 @@ export function normalizeProductName(name) {
     return s;
 }
 export function normalizeRow(productName, price, currency, supplier) {
-    const normalized_name = normalizeProductName(productName);
+    const trimmed = productName.trim();
+    const cleanName = sanitizeRawProductName(trimmed) || trimmed;
+    const normalized_name = normalizeProductName(cleanName);
     return {
-        product_name: productName.trim(),
-        normalized_name: normalized_name || productName.trim().toLowerCase(),
+        product_name: cleanName,
+        normalized_name: normalized_name || cleanName.toLowerCase(),
         price: Number(price) || 0,
         currency: currency || 'RUB',
         supplier,

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { api, type PriceChange, type Supplier } from '../../api/client';
 import { useT } from '../../i18n/LocaleContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { displayProductName } from '../../lib/displayProductName';
 
 export default function PriceChanges() {
   const t = useT();
@@ -95,7 +96,7 @@ export default function PriceChanges() {
                 className={`rounded-xl border border-[var(--border)] p-3 ${c.is_priority ? 'bg-amber-50/40' : ''}`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-medium text-slate-900">{c.product_name}</p>
+                  <p className="font-medium text-slate-900">{displayProductName(c.product_name)}</p>
                   <span
                     className={`shrink-0 text-lg font-bold ${
                       c.change_percent > 0 ? 'text-red-600' : c.change_percent < 0 ? 'text-emerald-600' : 'text-slate-500'
@@ -132,7 +133,7 @@ export default function PriceChanges() {
                     className={`h-12 border-b border-slate-100 md:h-14 ${c.is_priority ? 'bg-amber-50/50' : ''}`}
                   >
                     <td className="px-4 py-3">
-                      <span className="font-medium text-slate-800">{c.product_name}</span>
+                      <span className="font-medium text-slate-800">{displayProductName(c.product_name)}</span>
                       {c.is_priority && (
                         <span className="ml-2 text-xs text-amber-600">{t('dashboard.priority')}</span>
                       )}

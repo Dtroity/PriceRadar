@@ -213,26 +213,37 @@ export async function getPriceSummary(params: {
     `WITH ordered AS (
        SELECT
          p.product_id,
+         pl.supplier_id,
          p.price,
-         COALESCE(p.created_at, pl.created_at) AS ts
+         COALESCE(p.created_at, pl.created_at) AS ts,
+         pl.id AS price_list_id
        FROM prices p
        JOIN price_lists pl ON p.price_list_id = pl.id
        WHERE pl.organization_id = $1::uuid
          AND COALESCE(p.created_at, pl.created_at) >= NOW() - $2::int * INTERVAL '1 day'
      ),
      first_p AS (
-       SELECT DISTINCT ON (product_id) product_id, price AS first_price
+       SELECT DISTINCT ON (product_id, supplier_id)
+         product_id,
+         supplier_id,
+         price AS first_price
        FROM ordered
-       ORDER BY product_id, ts ASC
+       ORDER BY product_id, supplier_id, ts ASC, price_list_id ASC
      ),
      last_p AS (
-       SELECT DISTINCT ON (product_id) product_id, price AS last_price
+       SELECT DISTINCT ON (product_id, supplier_id)
+         product_id,
+         supplier_id,
+         price AS last_price
        FROM ordered
-       ORDER BY product_id, ts DESC
+       ORDER BY product_id, supplier_id, ts DESC, price_list_id DESC
      )
      SELECT pr.id AS product_id, pr.name, f.first_price::text, l.last_price::text
      FROM first_p f
-     INNER JOIN last_p l ON l.product_id = f.product_id AND f.first_price IS DISTINCT FROM l.last_price
+     INNER JOIN last_p l
+       ON l.product_id = f.product_id
+       AND l.supplier_id = f.supplier_id
+       AND f.first_price IS DISTINCT FROM l.last_price
      INNER JOIN products pr ON pr.id = f.product_id AND pr.organization_id = $1::uuid
      WHERE f.first_price > 0`,
     [organizationId, periodDays]
@@ -251,8 +262,18 @@ export async function getPriceSummary(params: {
     });
   }
 
-  const growing = [...changes].filter((c) => c.change_pct > 0).sort((a, b) => b.change_pct - a.change_pct);
-  const falling = [...changes].filter((c) => c.change_pct < 0).sort((a, b) => a.change_pct - b.change_pct);
+  /** Один товар у нескольких поставщиков — в топе оставляем строку с наибольшим по модулю изменением */
+  const byProduct = new Map<string, SummaryProductChange>();
+  for (const c of changes) {
+    const prev = byProduct.get(c.product.id);
+    if (!prev || Math.abs(c.change_pct) > Math.abs(prev.change_pct)) {
+      byProduct.set(c.product.id, c);
+    }
+  }
+  const unique = [...byProduct.values()];
+
+  const growing = [...unique].filter((c) => c.change_pct > 0).sort((a, b) => b.change_pct - a.change_pct);
+  const falling = [...unique].filter((c) => c.change_pct < 0).sort((a, b) => a.change_pct - b.change_pct);
 
   const anomalies_count = await anomaliesModel.countAnomaliesInPeriod(organizationId, periodDays);
 

@@ -1,5 +1,10 @@
 import type { NormalizedRow } from '../types/index.js';
 
+/** Убирает типичный мусор из ячеек Excel (ведущие слэши, пробелы). */
+export function sanitizeRawProductName(name: string): string {
+  return name.replace(/^[\s/\\]+/u, '').trim();
+}
+
 /**
  * Normalize product name for matching across suppliers.
  * - lowercase
@@ -27,10 +32,12 @@ export function normalizeRow(
   currency: string,
   supplier?: string
 ): NormalizedRow {
-  const normalized_name = normalizeProductName(productName);
+  const trimmed = productName.trim();
+  const cleanName = sanitizeRawProductName(trimmed) || trimmed;
+  const normalized_name = normalizeProductName(cleanName);
   return {
-    product_name: productName.trim(),
-    normalized_name: normalized_name || productName.trim().toLowerCase(),
+    product_name: cleanName,
+    normalized_name: normalized_name || cleanName.toLowerCase(),
     price: Number(price) || 0,
     currency: currency || 'RUB',
     supplier,

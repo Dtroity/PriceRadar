@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, type Document } from '../api/client';
-import { pollPriceUploadJob } from '../lib/pollPriceUploadJob';
 import { useT } from '../i18n/LocaleContext';
 import { useBreakpoint } from '../hooks/useBreakpoint';
+import { useAuth } from '../auth/AuthContext';
 import { formatRelativeDate } from '../lib/formatRelativeDate';
 import PullToRefreshContainer from '../components/layout/PullToRefreshContainer';
 import SwipeableRow from '../components/layout/SwipeableRow';
+import UnifiedIngestionUpload from '../components/UnifiedIngestionUpload';
+import IngestionJournalSection from '../components/IngestionJournalSection';
 
 const STATUS_OPTIONS = ['', 'pending', 'parsed', 'needs_review', 'verified', 'failed', 'ocr_failed'];
 
@@ -116,14 +118,12 @@ export default function Documents() {
   const t = useT();
   const bp = useBreakpoint();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isEmployee = user?.role === 'employee';
   const [documents, setDocuments] = useState<Document[]>([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploadInfo, setUploadInfo] = useState<string | null>(null);
-  const [uploadKind, setUploadKind] = useState<'document' | 'price'>('document');
-  const [priceSupplier, setPriceSupplier] = useState('');
+  const [journalKey, setJournalKey] = useState(0);
 
   const load = async () => {
     const status = statusFilter || undefined;
@@ -138,66 +138,12 @@ export default function Documents() {
       .finally(() => setLoading(false));
   }, [statusFilter]);
 
-  const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadError(null);
-    setUploadInfo(null);
-    setUploading(true);
-
-    const run = async () => {
-      try {
-        if (uploadKind === 'price') {
-          setUploadInfo(t('upload.toastPriceStarted'));
-          const res = await api.upload(file, priceSupplier.trim() || 'Unknown Supplier', 'web');
-          const jobId = res.jobId != null ? String(res.jobId) : '';
-          if (jobId) {
-            setUploadInfo(t('upload.progressProcessing'));
-            const outcome = await pollPriceUploadJob(jobId, (phase) => {
-              if (phase === 'active') setUploadInfo(t('upload.progressActive'));
-              else if (phase === 'queued') setUploadInfo(t('upload.progressQueued'));
-            });
-            if (outcome === 'completed') {
-              setUploadInfo(t('upload.toastPriceDone'));
-            } else if (outcome === 'failed') {
-              try {
-                const st = await api.uploadJobStatus(jobId);
-                setUploadError(st.failedReason || t('upload.toastPriceFailed'));
-                setUploadInfo(null);
-              } catch {
-                setUploadError(t('upload.toastPriceFailed'));
-                setUploadInfo(null);
-              }
-            } else {
-              setUploadInfo(t('upload.toastPriceStillRunning'));
-            }
-          } else {
-            setUploadInfo(t('upload.queued'));
-          }
-          return;
-        }
-
-        await api.documents.upload(file, 'web');
-        setUploadInfo(t('upload.toastDocumentQueued'));
-        setStatusFilter('');
-        const list = await api.documents.list();
-        setDocuments(list);
-      } catch (err) {
-        setUploadError(err instanceof Error ? err.message : t('documents.uploadFailed'));
-        setUploadInfo(null);
-      } finally {
-        setUploading(false);
-      }
-    };
-
-    void run();
-    e.target.value = '';
-  };
-
   const statusLabel = (s: string) => (s ? t('documents.' + s) : t('documents.allStatuses'));
 
   const listBody = loading ? (
-    <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500">{t('documents.loading')}</div>
+    <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+      {t('documents.loading')}
+    </div>
   ) : documents.length === 0 ? (
     <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500">
       {t('documents.noDocuments')}
@@ -276,44 +222,41 @@ export default function Documents() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold text-slate-800">{t('documents.title')}</h1>
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <div
-            className="flex max-w-md rounded-lg bg-slate-100 p-1"
-            role="group"
-            aria-label={t('documents.uploadKindLabel')}
+        <div>
+          <h1 className="text-xl font-semibold text-slate-800">{t('documents.title')}</h1>
+          <p className="mt-1 text-sm text-slate-600">{t('documents.unifiedModuleLead')}</p>
+        </div>
+        {isEmployee ? (
+          <Link
+            to="/employee"
+            className="text-sm font-medium text-amber-800 underline hover:text-amber-950"
           >
-            <button
-              type="button"
-              onClick={() => setUploadKind('document')}
-              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium min-h-[44px] ${
-                uploadKind === 'document' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-              }`}
-            >
-              {t('documents.uploadAsDocument')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setUploadKind('price')}
-              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium min-h-[44px] ${
-                uploadKind === 'price' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-              }`}
-            >
-              {t('documents.uploadAsPrice')}
-            </button>
+            ← {t('ingestion.backToEmployee')}
+          </Link>
+        ) : (
+          <Link to="/" className="text-sm font-medium text-amber-800 underline hover:text-amber-950">
+            ← {t('ingestion.backToHub')}
+          </Link>
+        )}
+      </div>
+
+      <UnifiedIngestionUpload
+        onCompleted={() => {
+          setJournalKey((k) => k + 1);
+          void load();
+        }}
+      />
+
+      <IngestionJournalSection isEmployee={isEmployee} refreshKey={journalKey} />
+
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800">{t('documents.profileDocumentsTitle')}</h2>
+            <p className="mt-1 text-sm text-slate-600">{t('documents.profileDocumentsLead')}</p>
           </div>
-          {uploadKind === 'price' && (
-            <input
-              type="text"
-              value={priceSupplier}
-              onChange={(e) => setPriceSupplier(e.target.value)}
-              placeholder={t('upload.supplierPlaceholder')}
-              disabled={uploading}
-              className="min-h-[44px] w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto"
-            />
-          )}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -325,33 +268,16 @@ export default function Documents() {
               </option>
             ))}
           </select>
-          <label className="inline-flex min-h-[44px] cursor-pointer items-center rounded-lg bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700">
-            <input
-              type="file"
-              className="hidden"
-              accept=".xls,.xlsx,.csv,.pdf,.doc,.docx,image/*"
-              onChange={onFileSelect}
-              disabled={uploading}
-            />
-            {uploading ? t('documents.uploading') : t('documents.uploadInvoice')}
-          </label>
         </div>
-      </div>
-      {uploadError && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{uploadError}</div>
-      )}
-      {uploadInfo && <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{uploadInfo}</div>}
-      <p className="text-slate-600">
-        {t('documents.moduleDescription')}. {t('documents.description')}
-      </p>
 
-      {bp === 'mobile' ? (
-        <PullToRefreshContainer onRefresh={async () => load()} enabled>
-          {listBody}
-        </PullToRefreshContainer>
-      ) : (
-        listBody
-      )}
+        {bp === 'mobile' ? (
+          <PullToRefreshContainer onRefresh={async () => load()} enabled>
+            {listBody}
+          </PullToRefreshContainer>
+        ) : (
+          listBody
+        )}
+      </section>
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import type { NormalizedRow } from '../types/index.js';
+/** Убирает типичный мусор из ячеек Excel (ведущие слэши, пробелы). */
+export declare function sanitizeRawProductName(name: string): string;
 /**
  * Normalize product name for matching across suppliers.
  * - lowercase

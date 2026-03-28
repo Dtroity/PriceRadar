@@ -76,6 +76,8 @@ export default function UnifiedIngestionUpload({ onCompleted }: Props) {
       if (outcome === 'completed') {
         if (last.summary?.ocr_failed) {
           pushToast('info', t('ingestion.docOcrWeak'));
+        } else if (last.confirmedKind === 'price_list' && typeof last.summary?.rows === 'number') {
+          pushToast('ok', t('ingestion.donePriceSuccess').replace('{n}', String(last.summary.rows)));
         } else {
           pushToast('ok', t('ingestion.doneSuccess'));
         }
@@ -235,7 +237,7 @@ export default function UnifiedIngestionUpload({ onCompleted }: Props) {
           </button>
           <p className="mt-2 text-xs text-slate-500">{t('upload.formats')}</p>
           <p className="mt-2 text-center text-sm">
-            <Link className="font-medium text-amber-800 underline hover:text-amber-950" to="/ingestion">
+            <Link className="font-medium text-amber-800 underline hover:text-amber-950" to="/documents#ingestion-journal">
               {t('ingestion.openHistory')} →
             </Link>
           </p>

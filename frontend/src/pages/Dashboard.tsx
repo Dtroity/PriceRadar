@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api, type PriceChange } from '../api/client';
 import { useT } from '../i18n/LocaleContext';
 import UnifiedIngestionUpload from '../components/UnifiedIngestionUpload';
+import { displayProductName } from '../lib/displayProductName';
 
 export default function Dashboard() {
   const t = useT();
@@ -84,7 +85,7 @@ export default function Dashboard() {
             {preview.map((c) => (
               <li key={c.id} className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3 text-sm">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-slate-900">{c.product_name}</p>
+                  <p className="truncate font-medium text-slate-900">{displayProductName(c.product_name)}</p>
                   <p className="truncate text-xs text-slate-500">{c.supplier_name}</p>
                 </div>
                 <span

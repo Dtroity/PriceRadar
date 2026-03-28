@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { PriceSummaryResponse } from '../../api/analyticsClient';
+import { useLocale } from '../../i18n/LocaleContext';
 
 type Props = {
   data: PriceSummaryResponse | null;
@@ -16,6 +17,8 @@ export default function PriceSummaryCards({
   onProductClick,
   anomalyCount,
 }: Props) {
+  const { t } = useLocale();
+
   if (loading) {
     return <div className="grid md:grid-cols-2 gap-4">{[1, 2].map((i) => (
       <div key={i} className="h-64 rounded-xl bg-slate-100 animate-pulse" />
@@ -39,6 +42,7 @@ export default function PriceSummaryCards({
           Товаров с историей за {periodDays} дн.: {data?.total_products_tracked ?? 0}
         </span>
       </div>
+      <p className="text-xs text-slate-500 max-w-3xl leading-relaxed">{t('analytics.summaryPerSupplier')}</p>
       <div className="grid md:grid-cols-2 gap-4">
         <div className="rounded-xl border border-red-100 bg-red-50/50 p-4">
           <h3 className="font-semibold text-red-900 flex items-center gap-2 mb-3">

@@ -48,6 +48,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ingestion.priceJobFailed': 'Ошибка разбора прайса',
     'ingestion.docOcrWeak': 'Документ обработан; качество OCR низкое — проверьте в «Скан».',
     'ingestion.doneSuccess': 'Готово: данные добавлены в систему.',
+    'ingestion.donePriceSuccess':
+      'Прайс сохранён: {n} строк в каталоге цен. «Изменений цен: 0» при первой загрузке поставщика — норма. Раздел «Документы» — только для счетов и накладных, не для Excel-прайсов.',
     'ingestion.doneFailed': 'Обработка не удалась',
     'ingestion.doneTimeout': 'Обработка ещё идёт на сервере — обновите журнал позже.',
     'ingestion.confirmTitle': 'Уточните тип файла',
@@ -71,6 +73,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ingestion.summaryChanges': 'Изменений цен',
     'ingestion.summaryFirstPriceList':
       'Первый прайс этого поставщика: строки сохранены; в ленту изменений попадают только отличия от предыдущего файла.',
+    'analytics.summaryPerSupplier':
+      'Рост и падение считаются по каждому поставщику отдельно: сравниваются самая ранняя и самая поздняя цена товара у этого поставщика за период (не смешиваются прайсы разных поставщиков).',
     'ingestion.lines': 'Строк',
     'ingestion.openDoc': 'Документ',
     'ingestion.delete': 'Удалить',
@@ -116,11 +120,19 @@ export const translations: Record<Locale, Record<string, string>> = {
     'dashboard.new': 'Стало',
     'dashboard.changePercent': 'Изменение %',
     'dashboard.date': 'Дата',
-    'employee.ingestionLink': 'Загрузки прайсов и документов',
+    'employee.ingestionLink': 'Скан: загрузки и документы',
     'dashboard.loading': 'Загрузка...',
     'dashboard.noPriceChanges': 'Нет изменений цен',
     'dashboard.priority': 'Приоритет',
     'documents.title': 'Провиатор Скан',
+    'documents.unifiedModuleLead':
+      'Загрузка прайсов и документов, журнал обработки и откат; ниже — распознанные накладные и счета в профиле.',
+    'documents.ingestionJournalTitle': 'Журнал загрузок',
+    'documents.ingestionJournalLead':
+      'Все файлы из единого конвейера: прайс-листы и документы. Удаление записи откатывает созданный прайс или документ.',
+    'documents.profileDocumentsTitle': 'Документы в профиле',
+    'documents.profileDocumentsLead':
+      'Накладные и счета после распознавания: проверка строк, исправление ошибок, подтверждение.',
     'documents.moduleDescription': 'AI-обработка накладных',
     'documents.uploadInvoice': 'Загрузить файл',
     'documents.uploading': 'Загрузка…',
@@ -391,6 +403,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ingestion.priceJobFailed': 'Price list processing failed',
     'ingestion.docOcrWeak': 'Document processed; OCR quality is low — review under Scan.',
     'ingestion.doneSuccess': 'Done: data has been added.',
+    'ingestion.donePriceSuccess':
+      'Price list saved: {n} lines in the price catalog. Zero “price changes” on a supplier’s first upload is expected. The Documents page is for invoices/scans, not Excel price files.',
     'ingestion.doneFailed': 'Processing failed',
     'ingestion.doneTimeout': 'Still processing on the server — refresh the log later.',
     'ingestion.confirmTitle': 'Choose file type',
@@ -414,6 +428,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ingestion.summaryChanges': 'Price changes',
     'ingestion.summaryFirstPriceList':
       'First price list for this supplier: rows are saved; the change feed only records differences from the previous upload.',
+    'analytics.summaryPerSupplier':
+      'Ups and downs are computed per supplier: earliest vs latest price for that product from that supplier in the period (price lists from different suppliers are not mixed).',
     'ingestion.lines': 'Lines',
     'ingestion.openDoc': 'Document',
     'ingestion.delete': 'Delete',
@@ -459,11 +475,19 @@ export const translations: Record<Locale, Record<string, string>> = {
     'dashboard.new': 'New',
     'dashboard.changePercent': 'Change %',
     'dashboard.date': 'Date',
-    'employee.ingestionLink': 'Price lists & document uploads',
+    'employee.ingestionLink': 'Scan: uploads & documents',
     'dashboard.loading': 'Loading...',
     'dashboard.noPriceChanges': 'No price changes',
     'dashboard.priority': 'Priority',
     'documents.title': 'Proviator Scan',
+    'documents.unifiedModuleLead':
+      'Upload price lists and documents, processing log and rollback; below — recognized invoices in your profile.',
+    'documents.ingestionJournalTitle': 'Upload log',
+    'documents.ingestionJournalLead':
+      'All files from the unified pipeline. Deleting a row rolls back the created price list or document.',
+    'documents.profileDocumentsTitle': 'Profile documents',
+    'documents.profileDocumentsLead':
+      'Invoices after recognition: review lines, fix issues, confirm.',
     'documents.moduleDescription': 'AI invoice processing',
     'documents.uploadInvoice': 'Upload file',
     'documents.uploading': 'Uploading…',

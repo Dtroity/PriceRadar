@@ -22,7 +22,10 @@ export async function insertPrices(
     [priceListId]
   );
   const pl = plRows[0];
-  if (!pl) return;
+  if (!pl) {
+    logger.error({ priceListId, itemCount: items.length }, 'insertPrices: price_list row missing');
+    throw new Error(`insertPrices: price list not found (${priceListId})`);
+  }
 
   const docId = options?.documentId ?? null;
   const oldPriceByProduct = new Map<string, number | null>();
