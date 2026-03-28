@@ -10,6 +10,7 @@ import type { DocumentStatus } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import * as Sentry from '@sentry/node';
 import { documentsOcrConfidence, documentsProcessedTotal } from '../monitoring/metrics.js';
+import * as ingestionJobs from '../models/ingestionJobs.js';
 
 const PARSE_CONFIDENCE_THRESHOLD = 0.7;
 
@@ -18,6 +19,7 @@ export interface DocumentJobPayload {
   organizationId: string;
   filePath: string;
   mimeType: string;
+  ingestionJobId?: string;
 }
 
 function resolveFilePath(filePath: string): string {
@@ -25,8 +27,12 @@ function resolveFilePath(filePath: string): string {
 }
 
 export async function processDocumentJob(job: Job<DocumentJobPayload>): Promise<void> {
-  const { documentId, organizationId, filePath, mimeType } = job.data;
+  const { documentId, organizationId, filePath, mimeType, ingestionJobId } = job.data;
   const absPath = resolveFilePath(filePath);
+
+  if (ingestionJobId) {
+    await ingestionJobs.updateIngestionJob(ingestionJobId, organizationId, { status: 'processing' });
+  }
 
   let buffer: Buffer;
   try {
@@ -35,6 +41,12 @@ export async function processDocumentJob(job: Job<DocumentJobPayload>): Promise<
     await recordError(documentId, err instanceof Error ? err.message : 'File read failed');
     await documentsModel.updateParsed(documentId, organizationId, { status: 'failed' });
     documentsProcessedTotal.inc({ status: 'failed' });
+    if (ingestionJobId) {
+      await ingestionJobs.updateIngestionJob(ingestionJobId, organizationId, {
+        status: 'failed',
+        error_message: err instanceof Error ? err.message : 'File read failed',
+      });
+    }
     if (process.env.SENTRY_DSN) {
       Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
         extra: { documentId, organizationId, phase: 'read_file' },
@@ -49,6 +61,12 @@ export async function processDocumentJob(job: Job<DocumentJobPayload>): Promise<
   } catch (err) {
     documentsProcessedTotal.inc({ status: 'failed' });
     await documentsModel.updateParsed(documentId, organizationId, { status: 'failed' }).catch(() => {});
+    if (ingestionJobId) {
+      await ingestionJobs.updateIngestionJob(ingestionJobId, organizationId, {
+        status: 'failed',
+        error_message: err instanceof Error ? err.message : 'OCR failed',
+      });
+    }
     if (process.env.SENTRY_DSN) {
       Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
         extra: { documentId, organizationId, jobId: job.id, phase: 'ocr' },
@@ -86,6 +104,18 @@ export async function processDocumentJob(job: Job<DocumentJobPayload>): Promise<
       'OCR failed threshold'
     );
     documentsProcessedTotal.inc({ status: 'ocr_failed' });
+    if (ingestionJobId) {
+      await ingestionJobs.updateIngestionJob(ingestionJobId, organizationId, {
+        status: 'completed',
+        summary: {
+          document_id: documentId,
+          ocr_failed: true,
+          ocr_confidence: ocr.confidence,
+          ocr_engine: ocr.engine,
+        },
+        error_message: null,
+      });
+    }
     if (process.env.SENTRY_DSN) {
       Sentry.captureMessage('Document OCR failed', {
         level: 'warning',
@@ -101,6 +131,12 @@ export async function processDocumentJob(job: Job<DocumentJobPayload>): Promise<
   } catch (err) {
     documentsProcessedTotal.inc({ status: 'failed' });
     await documentsModel.updateParsed(documentId, organizationId, { status: 'failed' }).catch(() => {});
+    if (ingestionJobId) {
+      await ingestionJobs.updateIngestionJob(ingestionJobId, organizationId, {
+        status: 'failed',
+        error_message: err instanceof Error ? err.message : 'Parse failed',
+      });
+    }
     if (process.env.SENTRY_DSN) {
       Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
         extra: { documentId, organizationId, jobId: job.id, phase: 'parse' },
@@ -169,6 +205,21 @@ export async function processDocumentJob(job: Job<DocumentJobPayload>): Promise<
   }
 
   documentsProcessedTotal.inc({ status });
+
+  if (ingestionJobId) {
+    await ingestionJobs.updateIngestionJob(ingestionJobId, organizationId, {
+      status: 'completed',
+      summary: {
+        document_id: documentId,
+        document_status: status,
+        line_items: items.length,
+        document_number: parsed.documentNumber ?? null,
+        supplier: parsed.supplier ?? null,
+        total: parsed.total ?? null,
+      },
+      error_message: null,
+    });
+  }
 }
 
 async function recordError(documentId: string, errorMessage: string): Promise<void> {

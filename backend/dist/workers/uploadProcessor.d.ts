@@ -8,5 +8,6 @@ export interface UploadJobPayload {
     mimeType: string;
     originalName: string;
     organizationId?: string;
+    ingestionJobId?: string;
 }
 export declare function processUploadJob(job: Job<UploadJobPayload>): Promise<void>;

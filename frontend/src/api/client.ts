@@ -183,8 +183,60 @@ export const api = {
       body: form,
     }).then(async (r) => {
       if (!r.ok) throw new Error(await readApiError(r, 'Upload failed'));
-      return r.json();
+      return r.json() as Promise<{ message: string; jobId: string | number }>;
     });
+  },
+  uploadJobStatus: (jobId: string) =>
+    request<{ state: string; failedReason?: string; attemptsMade?: number }>(
+      `/upload/jobs/${encodeURIComponent(jobId)}`
+    ),
+  ingestion: {
+    init: (file: File, opts?: { supplierName?: string; sourceType?: string }) => {
+      const form = new FormData();
+      form.append('file', file);
+      if (opts?.supplierName) form.append('supplierName', opts.supplierName);
+      form.append('sourceType', opts?.sourceType ?? 'web');
+      const token = getToken();
+      return fetch(`${API}/ingestion/init`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      }).then(async (r) => {
+        if (!r.ok) throw new Error(await readApiError(r, 'Upload failed'));
+        return r.json() as Promise<IngestionInitResponse>;
+      });
+    },
+    confirm: (id: string, body: { kind: string; supplierName?: string; sourceType?: string }) =>
+      request<IngestionConfirmResponse>(`/ingestion/${encodeURIComponent(id)}/confirm`, {
+        method: 'POST',
+        body: JSON.stringify({
+          kind: body.kind,
+          ...(body.supplierName != null ? { supplierName: body.supplierName } : {}),
+          sourceType: body.sourceType ?? 'web',
+        }),
+      }),
+    duplicateDecision: (
+      id: string,
+      body: { proceed: boolean; supplierName?: string; sourceType?: string }
+    ) =>
+      request<IngestionDuplicateDecisionResponse>(
+        `/ingestion/${encodeURIComponent(id)}/duplicate-decision`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            proceed: body.proceed,
+            ...(body.supplierName != null ? { supplierName: body.supplierName } : {}),
+            sourceType: body.sourceType ?? 'web',
+          }),
+        }
+      ),
+    list: (limit?: number) =>
+      request<{ items: IngestionRecord[] }>(
+        `/ingestion${limit != null ? `?limit=${encodeURIComponent(String(limit))}` : ''}`
+      ),
+    get: (id: string) => request<IngestionRecord>(`/ingestion/${encodeURIComponent(id)}`),
+    remove: (id: string) =>
+      request<{ ok: boolean }>(`/ingestion/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   },
   telegram: {
     status: () => request<{ enabled: boolean }>('/telegram/status'),
@@ -360,6 +412,54 @@ export interface ProductAuditEntry {
   actor_id: string | null;
   meta: Record<string, unknown> | null;
   created_at: string;
+}
+
+export interface IngestionRecord {
+  id: string;
+  originalFilename: string;
+  mimeType: string;
+  suggestedKind: string;
+  confirmedKind: string | null;
+  status: string;
+  detection: Record<string, unknown>;
+  bullmqJobId: string | null;
+  documentId: string | null;
+  priceListId: string | null;
+  errorMessage: string | null;
+  summary: Record<string, unknown>;
+  duplicateOfId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IngestionInitResponse {
+  ingestion: IngestionRecord;
+  needsConfirmation: boolean;
+  suggestedKind?: string;
+  alternateKind?: string;
+  detection?: Record<string, unknown>;
+  rejectedDuplicate?: boolean;
+  needsDuplicateDecision?: boolean;
+  duplicateOf?: { id: string; createdAt: string };
+  autoRouted?: boolean;
+  bullmqJobId?: string;
+  documentId?: string;
+  forcedKind?: string;
+  note?: string;
+}
+
+export interface IngestionConfirmResponse {
+  ingestion: IngestionRecord;
+  bullmqJobId?: string;
+  documentId?: string;
+}
+
+export interface IngestionDuplicateDecisionResponse {
+  ok: boolean;
+  cancelled?: boolean;
+  ingestion?: IngestionRecord;
+  bullmqJobId?: string;
+  documentId?: string;
 }
 
 export interface DocumentItem {

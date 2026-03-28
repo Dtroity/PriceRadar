@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { useLocale } from '../i18n/LocaleContext';
 import { request } from '../api/client';
 import { Logo } from '../components/layout/Logo';
 
@@ -8,6 +9,7 @@ type Product = { id: string; name: string; unit?: string | null };
 
 export default function EmployeePage() {
   const { user } = useAuth();
+  const { t } = useLocale();
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [qty, setQty] = useState<Record<string, number>>({});
@@ -55,9 +57,17 @@ export default function EmployeePage() {
 
   return (
     <div className="max-w-md mx-auto">
-      <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+      <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center gap-2">
         <Logo size="sm" />
-        <span className="text-sm text-slate-500">{new Date().toLocaleDateString('ru-RU')}</span>
+        <div className="flex flex-col items-end gap-1 text-right">
+          <Link
+            to="/ingestion"
+            className="text-sm font-medium text-amber-800 underline hover:text-amber-950"
+          >
+            {t('employee.ingestionLink')}
+          </Link>
+          <span className="text-sm text-slate-500">{new Date().toLocaleDateString('ru-RU')}</span>
+        </div>
       </div>
 
       {loading ? (

@@ -3,7 +3,7 @@ import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import { config } from '../config.js';
 import { getTelegramUserByTelegramId, createTelegramUser } from '../models/telegramUsers.js';
-import { uploadQueue } from '../workers/queue.js';
+import { submitIngestionFromUploadedFile } from '../services/ingestionOrchestrate.js';
 import { pool } from '../db/pool.js';
 import path from 'path';
 import fs from 'fs/promises';
@@ -122,19 +122,16 @@ export function startTelegramBot() {
         );
         return;
       }
-      await uploadQueue.add(
-        'process',
-        {
-          filePath: destPath,
-          supplierName: 'Telegram Upload',
-          sourceType: 'telegram',
-          mimeType: msg.document?.mime_type || 'application/octet-stream',
-          originalName: msg.document?.file_name || `document${ext}`,
-          organizationId: orgId,
-        },
-        { attempts: 2 }
-      );
-      await bot.sendMessage(chatId, 'Файл принят, прайс поставлен в очередь на разбор.');
+      const result = await submitIngestionFromUploadedFile({
+        organizationId: orgId,
+        userId: null,
+        filePath: destPath,
+        originalName: msg.document?.file_name || `document${ext}`,
+        mimeType: msg.document?.mime_type || 'application/octet-stream',
+        sourceType: 'telegram',
+        supplierName: 'Telegram Upload',
+      });
+      await bot.sendMessage(chatId, result.message);
     } catch (err) {
       console.error('Telegram document handling:', err);
       await bot.sendMessage(chatId, 'Failed to process file.');
@@ -194,19 +191,16 @@ export function startTelegramBot() {
         );
         return;
       }
-      await uploadQueue.add(
-        'process',
-        {
-          filePath: destPath,
-          supplierName: 'Telegram Upload',
-          sourceType: 'telegram',
-          mimeType: 'image/jpeg',
-          originalName: `photo_${Date.now()}.jpg`,
-          organizationId: orgId,
-        },
-        { attempts: 2 }
-      );
-      await bot.sendMessage(chatId, 'Фото принято, поставлено в очередь на разбор.');
+      const result = await submitIngestionFromUploadedFile({
+        organizationId: orgId,
+        userId: null,
+        filePath: destPath,
+        originalName: `photo_${Date.now()}.jpg`,
+        mimeType: 'image/jpeg',
+        sourceType: 'telegram',
+        supplierName: 'Telegram Upload',
+      });
+      await bot.sendMessage(chatId, result.message);
     } catch (err) {
       console.error('Telegram photo handling:', err);
       await bot.sendMessage(chatId, 'Failed to process photo.');

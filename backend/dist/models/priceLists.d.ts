@@ -7,4 +7,5 @@ export declare function getPriceListById(priceListId: string): Promise<{
     organization_id?: string;
     upload_date: Date;
 } | null>;
+export declare function deletePriceList(organizationId: string, priceListId: string): Promise<boolean>;
 export declare function getPreviousPriceList(supplierId: string, beforeDate: Date, organizationId?: string): Promise<PriceList | null>;

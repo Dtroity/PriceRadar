@@ -18,6 +18,10 @@ export async function getPriceListById(priceListId) {
     const { rows } = await pool.query(`SELECT id, supplier_id, organization_id, upload_date FROM price_lists WHERE id = $1`, [priceListId]);
     return rows[0] ?? null;
 }
+export async function deletePriceList(organizationId, priceListId) {
+    const { rowCount } = await pool.query(`DELETE FROM price_lists WHERE id = $1 AND organization_id = $2`, [priceListId, organizationId]);
+    return (rowCount ?? 0) > 0;
+}
 export async function getPreviousPriceList(supplierId, beforeDate, organizationId) {
     if (organizationId) {
         const { rows } = await pool.query(`SELECT id, supplier_id, upload_date, source_type, file_path, created_at

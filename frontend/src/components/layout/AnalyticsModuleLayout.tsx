@@ -13,6 +13,8 @@ export default function AnalyticsModuleLayout() {
   const tab = (searchParams.get('tab') as string) || 'history';
 
   const isAnomalies = pathname.startsWith('/analytics/anomalies');
+  const isPrices = pathname.startsWith('/analytics/prices');
+  const isForecast = pathname.startsWith('/analytics/forecast');
   const onMain = pathname === '/analytics';
 
   return (
@@ -21,14 +23,20 @@ export default function AnalyticsModuleLayout() {
         className="-mx-1 flex gap-1 overflow-x-auto border-b border-slate-200 px-1 pb-px scrollbar-thin"
         aria-label="Аналитика"
       >
-        <Link to="/analytics?tab=history" className={tabClass(onMain && !isAnomalies && tab === 'history')}>
+        <Link to="/analytics?tab=history" className={tabClass(onMain && !isAnomalies && !isPrices && !isForecast && tab === 'history')}>
           Динамика цен
         </Link>
-        <Link to="/analytics?tab=suppliers" className={tabClass(onMain && !isAnomalies && tab === 'suppliers')}>
+        <Link to="/analytics?tab=suppliers" className={tabClass(onMain && !isAnomalies && !isPrices && !isForecast && tab === 'suppliers')}>
           Поставщики
         </Link>
-        <Link to="/analytics?tab=summary" className={tabClass(onMain && !isAnomalies && tab === 'summary')}>
+        <Link to="/analytics?tab=summary" className={tabClass(onMain && !isAnomalies && !isPrices && !isForecast && tab === 'summary')}>
           Сводка
+        </Link>
+        <Link to="/analytics/prices" className={tabClass(isPrices)}>
+          Цены
+        </Link>
+        <Link to="/analytics/forecast" className={tabClass(isForecast)}>
+          Прогноз
         </Link>
         <Link to="/analytics/anomalies" className={tabClass(isAnomalies)}>
           Аномалии

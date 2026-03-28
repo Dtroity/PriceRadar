@@ -14,10 +14,11 @@ export default function MoreMenuDrawer({ open, onClose }: Props) {
   if (!open) return null;
 
   const links: { to: string; label: string }[] = [
+    { to: '/ingestion', label: t('nav.ingestion') },
     { to: '/products', label: t('nav.products') },
     { to: '/analytics', label: t('nav.analytics') },
-    { to: '/prices', label: t('nav.prices') },
-    { to: '/forecast', label: t('nav.forecast') },
+    { to: '/analytics/prices', label: t('nav.prices') },
+    { to: '/analytics/forecast', label: t('nav.forecast') },
     { to: '/foodcost', label: t('nav.foodcost') },
     { to: '/stock', label: t('nav.stock') },
     { to: '/settings', label: t('nav.settings') },

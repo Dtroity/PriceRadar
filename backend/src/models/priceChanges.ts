@@ -17,16 +17,27 @@ export async function createPriceChange(
   oldPrice: number,
   newPrice: number,
   isPriority: boolean,
-  organizationId?: string
+  organizationId?: string,
+  sourcePriceListId?: string | null
 ): Promise<PriceChange> {
   const changeValue = newPrice - oldPrice;
   const changePercent = oldPrice !== 0 ? (changeValue / oldPrice) * 100 : 0;
   if (organizationId) {
     const { rows } = await pool.query(
-      `INSERT INTO price_changes (organization_id, product_id, supplier_id, old_price, new_price, change_value, change_percent, is_priority)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO price_changes (organization_id, product_id, supplier_id, old_price, new_price, change_value, change_percent, is_priority, source_price_list_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING id, product_id, supplier_id, old_price, new_price, change_value, change_percent, is_priority, created_at`,
-      [organizationId, productId, supplierId, oldPrice, newPrice, changeValue, changePercent, isPriority]
+      [
+        organizationId,
+        productId,
+        supplierId,
+        oldPrice,
+        newPrice,
+        changeValue,
+        changePercent,
+        isPriority,
+        sourcePriceListId ?? null,
+      ]
     );
     return rows[0];
   }

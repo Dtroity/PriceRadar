@@ -29,12 +29,11 @@ export default function Sidebar({ tabletOverlayOpen, onCloseTabletOverlay }: Pro
 
   const core: { to: string; label: string; end?: boolean }[] = [
     { to: '/', label: t('nav.dashboard'), end: true },
+    { to: '/ingestion', label: t('nav.ingestion') },
     { to: '/documents', label: t('nav.scan') },
     { to: '/analytics', label: t('nav.analytics') },
     { to: '/procurement', label: t('nav.procurement') },
     { to: '/products', label: t('nav.products') },
-    { to: '/prices', label: t('nav.prices') },
-    { to: '/forecast', label: t('nav.forecast') },
     { to: '/foodcost', label: t('nav.foodcost') },
     { to: '/stock', label: t('nav.stock') },
     { to: '/settings', label: t('nav.settings') },

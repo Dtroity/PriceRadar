@@ -29,6 +29,8 @@ import StockForecast from './pages/stock/StockForecast';
 import AutopilotRecommendations from './pages/stock/AutopilotRecommendations';
 import Analytics from './pages/Analytics';
 import AnomaliesPage from './pages/analytics/Anomalies';
+import PriceChanges from './pages/analytics/PriceChanges';
+import IngestionManagement from './pages/IngestionManagement';
 import PublicOrderPage from './pages/public/OrderPage';
 import EmployeePage from './pages/Employee';
 import ProcurementModuleLayout from './components/layout/ProcurementModuleLayout';
@@ -84,8 +86,9 @@ export default function App() {
                 <Route path="/employee" element={<EmployeePage />} />
                 <Route path="/documents" element={<Documents />} />
                 <Route path="/documents/:id" element={<DocumentDetail />} />
-                <Route path="/prices" element={<Dashboard />} />
-                <Route path="/forecast" element={<Forecast />} />
+                <Route path="/ingestion" element={<IngestionManagement />} />
+                <Route path="/prices" element={<Navigate to="/analytics/prices" replace />} />
+                <Route path="/forecast" element={<Navigate to="/analytics/forecast" replace />} />
                 <Route path="/foodcost" element={<FoodCost />} />
                 <Route path="/suppliers" element={<Navigate to="/procurement/suppliers" replace />} />
                 <Route path="/products" element={<Products />} />
@@ -116,6 +119,8 @@ export default function App() {
                 </Route>
                 <Route path="/analytics" element={<AnalyticsModuleLayout />}>
                   <Route index element={<Analytics />} />
+                  <Route path="prices" element={<PriceChanges />} />
+                  <Route path="forecast" element={<Forecast />} />
                   <Route path="anomalies" element={<AnomaliesPage />} />
                 </Route>
               </Routes>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, type Document } from '../api/client';
+import { pollPriceUploadJob } from '../lib/pollPriceUploadJob';
 import { useT } from '../i18n/LocaleContext';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { formatRelativeDate } from '../lib/formatRelativeDate';
@@ -121,6 +122,8 @@ export default function Documents() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadInfo, setUploadInfo] = useState<string | null>(null);
+  const [uploadKind, setUploadKind] = useState<'document' | 'price'>('document');
+  const [priceSupplier, setPriceSupplier] = useState('');
 
   const load = async () => {
     const status = statusFilter || undefined;
@@ -141,28 +144,53 @@ export default function Documents() {
     setUploadError(null);
     setUploadInfo(null);
     setUploading(true);
-    const lowerName = file.name.toLowerCase();
-    const ext = lowerName.includes('.') ? lowerName.split('.').pop() ?? '' : '';
-    const isPriceListFile = ['xls', 'xlsx', 'csv', 'doc', 'docx'].includes(ext);
-    const uploadPromise = isPriceListFile
-      ? api.upload(file, 'Unknown Supplier', 'web')
-      : api.documents.upload(file, 'web');
 
-    uploadPromise
-      .then(() => {
-        if (isPriceListFile) {
-          setUploadInfo('Файл поставлен в очередь на обработку прайс-листа. Результат появится в Ценах/Аналитике после обработки.');
-          return null;
+    const run = async () => {
+      try {
+        if (uploadKind === 'price') {
+          setUploadInfo(t('upload.toastPriceStarted'));
+          const res = await api.upload(file, priceSupplier.trim() || 'Unknown Supplier', 'web');
+          const jobId = res.jobId != null ? String(res.jobId) : '';
+          if (jobId) {
+            setUploadInfo(t('upload.progressProcessing'));
+            const outcome = await pollPriceUploadJob(jobId, (phase) => {
+              if (phase === 'active') setUploadInfo(t('upload.progressActive'));
+              else if (phase === 'queued') setUploadInfo(t('upload.progressQueued'));
+            });
+            if (outcome === 'completed') {
+              setUploadInfo(t('upload.toastPriceDone'));
+            } else if (outcome === 'failed') {
+              try {
+                const st = await api.uploadJobStatus(jobId);
+                setUploadError(st.failedReason || t('upload.toastPriceFailed'));
+                setUploadInfo(null);
+              } catch {
+                setUploadError(t('upload.toastPriceFailed'));
+                setUploadInfo(null);
+              }
+            } else {
+              setUploadInfo(t('upload.toastPriceStillRunning'));
+            }
+          } else {
+            setUploadInfo(t('upload.queued'));
+          }
+          return;
         }
-        setUploadInfo('Документ загружен и поставлен в очередь OCR.');
+
+        await api.documents.upload(file, 'web');
+        setUploadInfo(t('upload.toastDocumentQueued'));
         setStatusFilter('');
-        return api.documents.list();
-      })
-      .then((list) => {
-        if (list) setDocuments(list);
-      })
-      .catch((err) => setUploadError(err instanceof Error ? err.message : t('documents.uploadFailed')))
-      .finally(() => setUploading(false));
+        const list = await api.documents.list();
+        setDocuments(list);
+      } catch (err) {
+        setUploadError(err instanceof Error ? err.message : t('documents.uploadFailed'));
+        setUploadInfo(null);
+      } finally {
+        setUploading(false);
+      }
+    };
+
+    void run();
     e.target.value = '';
   };
 
@@ -251,7 +279,41 @@ export default function Documents() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-xl font-semibold text-slate-800">{t('documents.title')}</h1>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div
+            className="flex max-w-md rounded-lg bg-slate-100 p-1"
+            role="group"
+            aria-label={t('documents.uploadKindLabel')}
+          >
+            <button
+              type="button"
+              onClick={() => setUploadKind('document')}
+              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium min-h-[44px] ${
+                uploadKind === 'document' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+              }`}
+            >
+              {t('documents.uploadAsDocument')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setUploadKind('price')}
+              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium min-h-[44px] ${
+                uploadKind === 'price' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+              }`}
+            >
+              {t('documents.uploadAsPrice')}
+            </button>
+          </div>
+          {uploadKind === 'price' && (
+            <input
+              type="text"
+              value={priceSupplier}
+              onChange={(e) => setPriceSupplier(e.target.value)}
+              placeholder={t('upload.supplierPlaceholder')}
+              disabled={uploading}
+              className="min-h-[44px] w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto"
+            />
+          )}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}

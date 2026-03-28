@@ -47,7 +47,15 @@ export async function compareAndSaveChanges(
 
     const product = await productsModel.getProductById(p.product_id);
     const isPriority = product?.is_priority ?? false;
-    await priceChangesModel.createPriceChange(p.product_id, supplierId, oldPrice, newPrice, isPriority, organizationId);
+    await priceChangesModel.createPriceChange(
+      p.product_id,
+      supplierId,
+      oldPrice,
+      newPrice,
+      isPriority,
+      organizationId,
+      newPriceListId
+    );
     if (organizationId) {
       foodcostRecalcQueue.add('recalc', { organizationId, productId: p.product_id }).catch(() => {});
     }

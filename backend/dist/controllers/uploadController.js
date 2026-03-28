@@ -1,4 +1,5 @@
 import { uploadQueue } from '../workers/queue.js';
+import { decodeMultipartFilename } from '../utils/multipartFilename.js';
 export async function upload(req, res) {
     try {
         const file = req.file;
@@ -17,12 +18,13 @@ export async function upload(req, res) {
                 error: 'Для загрузки прайса нужна организация в сессии. Войдите с указанием workspace (slug) или проверьте JWT.',
             });
         }
+        const originalName = decodeMultipartFilename(file.originalname);
         const job = await uploadQueue.add('process', {
             filePath: file.path,
             supplierName,
             sourceType: sourceType,
             mimeType: file.mimetype,
-            originalName: file.originalname,
+            originalName,
             ...(organizationId && { organizationId }),
         }, { attempts: 2, backoff: { type: 'exponential', delay: 2000 } });
         return res.status(202).json({

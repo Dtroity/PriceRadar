@@ -48,6 +48,10 @@ export default function BottomNav() {
           <IconCart />
           <span>Заказ</span>
         </NavLink>
+        <NavLink to="/ingestion" className={itemClass}>
+          <IconFileText />
+          <span>{t('nav.bottom.ingestion')}</span>
+        </NavLink>
       </nav>
     );
   }

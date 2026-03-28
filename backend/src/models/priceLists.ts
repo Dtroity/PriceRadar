@@ -38,6 +38,14 @@ export async function getPriceListById(priceListId: string): Promise<{ id: strin
   return rows[0] ?? null;
 }
 
+export async function deletePriceList(organizationId: string, priceListId: string): Promise<boolean> {
+  const { rowCount } = await pool.query(
+    `DELETE FROM price_lists WHERE id = $1 AND organization_id = $2`,
+    [priceListId, organizationId]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
 export async function getPreviousPriceList(
   supplierId: string,
   beforeDate: Date,

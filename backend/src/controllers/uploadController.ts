@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { uploadQueue } from '../workers/queue.js';
 import type { AuthRequest } from '../auth/middleware.js';
+import { decodeMultipartFilename } from '../utils/multipartFilename.js';
 
 export async function upload(req: Request, res: Response) {
   try {
@@ -22,6 +23,8 @@ export async function upload(req: Request, res: Response) {
       });
     }
 
+    const originalName = decodeMultipartFilename(file.originalname);
+
     const job = await uploadQueue.add(
       'process',
       {
@@ -29,7 +32,7 @@ export async function upload(req: Request, res: Response) {
         supplierName,
         sourceType: sourceType as 'web' | 'telegram' | 'camera',
         mimeType: file.mimetype,
-        originalName: file.originalname,
+        originalName,
         ...(organizationId && { organizationId }),
       },
       { attempts: 2, backoff: { type: 'exponential', delay: 2000 } }

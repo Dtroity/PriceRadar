@@ -19,11 +19,15 @@ export async function runParserPipeline(
 
   if (kind === 'excel') {
     const buf = await readFile(filePath);
-    return parseExcel(buf);
+    const fromSheet = await parseExcel(buf);
+    if (fromSheet.length > 0) return fromSheet;
+    return parseWithAiFromFile(filePath, mimeType, originalName);
   }
   if (kind === 'csv') {
     const buf = await readFile(filePath);
-    return parseCsv(buf);
+    const fromCsv = parseCsv(buf);
+    if (fromCsv.length > 0) return fromCsv;
+    return parseWithAiFromFile(filePath, mimeType, originalName);
   }
 
   const rows = await parseWithAiFromFile(filePath, mimeType, originalName);

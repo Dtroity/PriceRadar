@@ -5,6 +5,8 @@ import * as suppliersController from '../controllers/suppliersController.js';
 import * as productsController from '../controllers/productsController.js';
 import * as priceChangesController from '../controllers/priceChangesController.js';
 import * as uploadController from '../controllers/uploadController.js';
+import * as uploadJobController from '../controllers/uploadJobController.js';
+import * as ingestionController from '../controllers/ingestionController.js';
 import * as telegramController from '../controllers/telegramController.js';
 import * as documentsController from '../controllers/documentsController.js';
 import * as recipesController from '../controllers/recipesController.js';
@@ -194,7 +196,14 @@ router.use((req, res, next) => {
         (method === 'GET' && p === '/products') ||
         (method === 'GET' && p === '/procurement/orders') ||
         (method === 'POST' && p === '/procurement/orders') ||
-        (method === 'GET' && /^\/procurement\/orders\/[^/]+$/.test(p));
+        (method === 'GET' && /^\/procurement\/orders\/[^/]+$/.test(p)) ||
+        (method === 'GET' && p === '/ingestion') ||
+        (method === 'GET' && /^\/ingestion\/[^/]+$/.test(p)) ||
+        (method === 'POST' && p === '/ingestion/init') ||
+        (method === 'POST' && /^\/ingestion\/[^/]+\/confirm$/.test(p)) ||
+        (method === 'POST' && /^\/ingestion\/[^/]+\/duplicate-decision$/.test(p)) ||
+        (method === 'DELETE' && /^\/ingestion\/[^/]+$/.test(p)) ||
+        (method === 'GET' && /^\/upload\/jobs\/[^/]+$/.test(p));
     if (!ok)
         return res.status(403).json({ error: 'Forbidden' });
     return next();
@@ -280,6 +289,22 @@ router.post('/upload', requireModule('price_monitoring'), async (req, res, next)
         next();
     });
 }, uploadController.upload);
+router.get('/upload/jobs/:jobId', requireModule('price_monitoring'), uploadJobController.getJobStatus);
+// Unified ingestion: classify → optional confirm → price list or document pipeline (сотрудники — только загрузка/журнал)
+const ingestionRoles = ['super_admin', 'org_admin', 'manager', 'employee'];
+router.post('/ingestion/init', requireRole(ingestionRoles), async (req, res, next) => {
+    await ensureUploadDir();
+    uploadMiddleware(req, res, (err) => {
+        if (err)
+            return res.status(400).json({ error: err.message });
+        next();
+    });
+}, ingestionController.postInit);
+router.post('/ingestion/:id/confirm', requireRole(ingestionRoles), ingestionController.postConfirm);
+router.post('/ingestion/:id/duplicate-decision', requireRole(ingestionRoles), ingestionController.postDuplicateDecision);
+router.get('/ingestion', requireRole(ingestionRoles), ingestionController.list);
+router.get('/ingestion/:id', requireRole(ingestionRoles), ingestionController.getOne);
+router.delete('/ingestion/:id', requireRole(ingestionRoles), ingestionController.remove);
 // Documents (invoices): upload -> AI parse; list, get, patch item, confirm
 router.post('/documents/upload', requireModule('invoice_ai'), async (req, res, next) => {
     await ensureUploadDir();

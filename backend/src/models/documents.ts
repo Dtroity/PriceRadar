@@ -286,3 +286,11 @@ export async function saveAiFeedback(
   );
   if (rowCount === 0) throw new Error('Document item not found or wrong organization');
 }
+
+export async function removeDocument(organizationId: string, documentId: string): Promise<boolean> {
+  const { rowCount } = await pool.query(`DELETE FROM documents WHERE id = $1 AND organization_id = $2`, [
+    documentId,
+    organizationId,
+  ]);
+  return (rowCount ?? 0) > 0;
+}
