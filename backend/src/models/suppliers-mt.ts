@@ -58,7 +58,7 @@ export async function deleteById(id: string, organizationId: string): Promise<bo
     'DELETE FROM suppliers WHERE id = $1 AND organization_id = $2',
     [id, organizationId]
   );
-  return rowCount > 0;
+  return (rowCount ?? 0) > 0;
 }
 
 export async function findOrCreate(
