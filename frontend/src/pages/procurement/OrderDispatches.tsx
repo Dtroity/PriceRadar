@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { request } from '../../api/client';
 import { cn } from '../../lib/cn';
+import { useT } from '../../i18n/LocaleContext';
 import DispatchChatPanel from './DispatchChatPanel';
 
 type Dispatch = {
@@ -13,30 +14,38 @@ type Dispatch = {
   supplier: { id: string; name: string; email: string | null };
 };
 
-function statusBadge(status: string) {
-  const base = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium';
-  if (status === 'sent') return <span className={cn(base, 'bg-slate-100 text-slate-700')}>Отправлен</span>;
-  if (status === 'accepted') return <span className={cn(base, 'bg-emerald-50 text-emerald-700')}>Принят</span>;
-  if (status === 'rejected') return <span className={cn(base, 'bg-rose-50 text-rose-700')}>Отклонён</span>;
-  if (status === 'partial') return <span className={cn(base, 'bg-amber-50 text-amber-800')}>Частично</span>;
-  if (status === 'completed') return <span className={cn(base, 'bg-blue-50 text-blue-700')}>Завершён</span>;
-  return <span className={cn(base, 'bg-slate-100 text-slate-700')}>{status}</span>;
-}
-
-function formatRelativeDate(iso: string): string {
-  const d = new Date(iso);
-  const diff = Date.now() - d.getTime();
-  const h = Math.floor(diff / 3600000);
-  if (h < 1) return 'только что';
-  if (h < 24) return `${h} ч назад`;
-  const days = Math.floor(h / 24);
-  return `${days} д назад`;
-}
-
 export default function OrderDispatches({ orderId }: { orderId: string }) {
+  const t = useT();
   const [dispatches, setDispatches] = useState<Dispatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [chatId, setChatId] = useState<string | null>(null);
+
+  const dispatchStatusLabel = (status: string) => {
+    const k = `dispatch.status.${status}`;
+    const lbl = t(k);
+    return lbl === k ? status : lbl;
+  };
+
+  const statusBadge = (status: string) => {
+    const base = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium';
+    const label = dispatchStatusLabel(status);
+    if (status === 'sent') return <span className={cn(base, 'bg-slate-100 text-slate-700')}>{label}</span>;
+    if (status === 'accepted') return <span className={cn(base, 'bg-emerald-50 text-emerald-700')}>{label}</span>;
+    if (status === 'rejected') return <span className={cn(base, 'bg-rose-50 text-rose-700')}>{label}</span>;
+    if (status === 'partial') return <span className={cn(base, 'bg-amber-50 text-amber-800')}>{label}</span>;
+    if (status === 'completed') return <span className={cn(base, 'bg-blue-50 text-blue-700')}>{label}</span>;
+    return <span className={cn(base, 'bg-slate-100 text-slate-700')}>{label}</span>;
+  };
+
+  const formatRelativeDate = (iso: string) => {
+    const d = new Date(iso);
+    const diff = Date.now() - d.getTime();
+    const h = Math.floor(diff / 3600000);
+    if (h < 1) return t('time.relative.justNow');
+    if (h < 24) return t('time.relative.hoursAgo').replace('{n}', String(h));
+    const days = Math.floor(h / 24);
+    return t('time.relative.daysAgo').replace('{n}', String(days));
+  };
 
   const load = async () => {
     setLoading(true);
@@ -71,24 +80,28 @@ export default function OrderDispatches({ orderId }: { orderId: string }) {
 
   const activeDispatch = useMemo(() => dispatches.find((d) => d.id === chatId) ?? null, [dispatches, chatId]);
 
+  const approvedLabel = t('procurement.status.approved');
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="font-medium text-slate-800">Отправки</h2>
+        <h2 className="font-medium text-slate-800">{t('dispatch.title')}</h2>
         <button
           type="button"
           className="text-sm text-slate-600 hover:text-slate-900"
           onClick={() => void load()}
         >
-          Обновить
+          {t('dispatch.refresh')}
         </button>
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-4 text-slate-500 text-sm">Загрузка…</div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-slate-500 text-sm">
+          {t('dispatch.loading')}
+        </div>
       ) : dispatches.length === 0 ? (
         <div className="rounded-xl border border-slate-200 bg-white p-4 text-slate-600 text-sm">
-          Отправок пока нет. Они появятся после перевода заявки в статус <b>approved</b>.
+          {t('dispatch.empty').replace('{status}', approvedLabel)}
         </div>
       ) : (
         <div className="grid gap-3">
@@ -98,7 +111,7 @@ export default function OrderDispatches({ orderId }: { orderId: string }) {
                 <div>
                   <p className="font-medium">{d.supplier.name}</p>
                   <p className="text-sm text-gray-500">
-                    {d.items_count} позиций · {formatRelativeDate(d.sent_at)}
+                    {t('dispatch.itemsLine').replace('{n}', String(d.items_count))} · {formatRelativeDate(d.sent_at)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -117,7 +130,7 @@ export default function OrderDispatches({ orderId }: { orderId: string }) {
                   className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm hover:bg-slate-50"
                   onClick={() => void openChat(d.id)}
                 >
-                  Переписка
+                  {t('dispatch.chat')}
                 </button>
                 {canResend(d) && (
                   <button
@@ -125,7 +138,7 @@ export default function OrderDispatches({ orderId }: { orderId: string }) {
                     className="rounded-lg px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
                     onClick={() => void resend(d.id)}
                   >
-                    Отправить повторно
+                    {t('dispatch.resend')}
                   </button>
                 )}
               </div>
@@ -143,4 +156,3 @@ export default function OrderDispatches({ orderId }: { orderId: string }) {
     </div>
   );
 }
-

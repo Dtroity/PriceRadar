@@ -39,7 +39,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             className="hidden min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 md:flex lg:hidden"
-            aria-label="Open menu"
+            aria-label={t('aria.openMenu')}
             onClick={() => setTabletMenuOpen(true)}
           >
             <IconMenu />

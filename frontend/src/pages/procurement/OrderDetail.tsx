@@ -228,7 +228,7 @@ export default function OrderDetail() {
               className={`rounded-lg px-3 py-1.5 text-sm font-medium border ${tab === 'dispatches' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700'}`}
               onClick={() => setTab('dispatches')}
             >
-              Отправки
+              {t('procurement.dispatchesTab')}
             </button>
           </div>
           <p className="text-sm text-slate-600">

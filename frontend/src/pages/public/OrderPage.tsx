@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChatSection } from '../../components/ChatSection';
 import { Logo } from '../../components/layout/Logo';
+import { useLocale } from '../../i18n/LocaleContext';
 
 type PublicOrderResponse = {
   restaurantName: string;
@@ -17,6 +18,7 @@ type PublicOrderResponse = {
 };
 
 export default function OrderPage() {
+  const { t, locale } = useLocale();
   const { token } = useParams();
   const [data, setData] = useState<PublicOrderResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,7 @@ export default function OrderPage() {
       setData(json);
       setExpired(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка загрузки');
+      setError(e instanceof Error ? e.message : t('publicOrder.loadError'));
     } finally {
       setLoading(false);
     }
@@ -76,7 +78,7 @@ export default function OrderPage() {
     return (
       <div className="min-h-screen bg-slate-50 p-4">
         <div className="max-w-lg mx-auto rounded-xl border bg-white p-6">
-          <div className="text-slate-500">Загрузка…</div>
+          <div className="text-slate-500">{t('publicOrder.loading')}</div>
         </div>
       </div>
     );
@@ -87,8 +89,8 @@ export default function OrderPage() {
       <div className="min-h-screen bg-slate-50 p-4">
         <div className="max-w-lg mx-auto rounded-xl border bg-white p-6">
           <Logo size="sm" />
-          <h1 className="mt-4 text-lg font-semibold text-slate-900">Ссылка недействительна</h1>
-          <p className="mt-2 text-sm text-slate-600">Попросите менеджера отправить новую ссылку.</p>
+          <h1 className="mt-4 text-lg font-semibold text-slate-900">{t('publicOrder.linkInvalid')}</h1>
+          <p className="mt-2 text-sm text-slate-600">{t('publicOrder.linkInvalidLead')}</p>
         </div>
       </div>
     );
@@ -99,12 +101,18 @@ export default function OrderPage() {
       <div className="min-h-screen bg-slate-50 p-4">
         <div className="max-w-lg mx-auto rounded-xl border bg-white p-6">
           <Logo size="sm" />
-          <h1 className="mt-4 text-lg font-semibold text-slate-900">Заказ не найден</h1>
+          <h1 className="mt-4 text-lg font-semibold text-slate-900">{t('publicOrder.notFound')}</h1>
           {error && <pre className="mt-3 whitespace-pre-wrap text-xs text-red-700">{error}</pre>}
         </div>
       </div>
     );
   }
+
+  const dispatchStatusLabel = (s: string) => {
+    const k = `dispatch.status.${s}`;
+    const lbl = t(k);
+    return lbl === k ? s : lbl;
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -113,7 +121,8 @@ export default function OrderPage() {
           <Logo size="sm" />
           <h1 className="mt-3 text-xl font-semibold">{data.restaurantName}</h1>
           <p className="text-sm text-slate-500">
-            Заказ от {new Date(data.dispatch.sentAt).toLocaleString('ru-RU')}
+            {t('publicOrder.orderFrom')}{' '}
+            {new Date(data.dispatch.sentAt).toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US')}
           </p>
         </div>
 
@@ -138,25 +147,25 @@ export default function OrderPage() {
               onClick={() => void accept()}
               className="flex-1 rounded-lg bg-emerald-600 px-4 py-3 text-white font-medium"
             >
-              Принять заказ
+              {t('publicOrder.accept')}
             </button>
             <button
               type="button"
               onClick={() => setRejectOpen(true)}
               className="flex-1 rounded-lg bg-rose-600 px-4 py-3 text-white font-medium"
             >
-              Отклонить
+              {t('publicOrder.reject')}
             </button>
           </div>
         ) : (
           <div className="mt-5 rounded-lg border bg-white px-4 py-3 text-sm text-slate-700">
-            Статус: <b>{data.dispatch.status}</b>
+            {t('publicOrder.status')} <b>{dispatchStatusLabel(data.dispatch.status)}</b>
           </div>
         )}
 
         {rejectOpen && (
           <div className="mt-4 rounded-xl border bg-white p-4">
-            <p className="font-medium">Причина (необязательно)</p>
+            <p className="font-medium">{t('publicOrder.rejectReason')}</p>
             <textarea
               value={rejectNote}
               onChange={(e) => setRejectNote(e.target.value)}
@@ -169,14 +178,14 @@ export default function OrderPage() {
                 className="flex-1 rounded-lg border px-4 py-2 text-sm"
                 onClick={() => setRejectOpen(false)}
               >
-                Отмена
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
                 className="flex-1 rounded-lg bg-rose-600 px-4 py-2 text-sm text-white font-medium"
                 onClick={() => void reject()}
               >
-                Отклонить
+                {t('publicOrder.reject')}
               </button>
             </div>
           </div>

@@ -12,7 +12,7 @@ export default function ProcurementModuleLayout() {
   const t = useT();
 
   const tabs: { to: string; end?: boolean; label: string }[] = [
-    { to: '/procurement', end: true, label: 'Обзор' },
+    { to: '/procurement', end: true, label: t('procurement.overview') },
     { to: '/procurement/orders', label: t('procurement.orders') },
     { to: '/procurement/suppliers', label: t('nav.suppliers') },
     { to: '/procurement/rules', label: t('procurement.rules') },

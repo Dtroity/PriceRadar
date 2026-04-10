@@ -110,7 +110,7 @@ export default function Suppliers({ embedded = false }: { embedded?: boolean }) 
 
   const channelBadge = (s: Supplier) => {
     const ch = (s as any).notify_channel ?? 'email';
-    if (ch === 'email') return badge('bg-blue-50 text-blue-700', 'Email');
+    if (ch === 'email') return badge('bg-blue-50 text-blue-700', t('suppliers.notifyChannel.email'));
     if (ch === 'telegram') return badge('bg-violet-50 text-violet-700', 'TG');
     if (ch === 'both') return badge('bg-indigo-50 text-indigo-700', 'Оба');
     if (ch === 'none') return badge('bg-slate-100 text-slate-600', 'Нет');

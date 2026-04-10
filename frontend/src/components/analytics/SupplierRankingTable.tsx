@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { BestSuppliersResponse } from '../../api/analyticsClient';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { useT } from '../../i18n/LocaleContext';
 
 type Col = 'name' | 'avg_price' | 'min_price' | 'delivery_count' | 'price_stability' | 'score';
 
@@ -11,6 +12,7 @@ type Props = {
 };
 
 export default function SupplierRankingTable({ data, loading, onSupplierClick }: Props) {
+  const t = useT();
   const bp = useBreakpoint();
   const [sortCol, setSortCol] = useState<Col>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -61,16 +63,16 @@ export default function SupplierRankingTable({ data, loading, onSupplierClick }:
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50">
-              <th className="px-3 py-2 text-left">Поставщик</th>
-              <th className="px-3 py-2 text-right">Средняя</th>
-              <th className="px-3 py-2 text-right">Рейтинг</th>
+              <th className="px-3 py-2 text-left">{t('supplierRanking.supplier')}</th>
+              <th className="px-3 py-2 text-right">{t('supplierRanking.avg')}</th>
+              <th className="px-3 py-2 text-right">{t('supplierRanking.score')}</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={3} className="py-8 text-center text-slate-500">
-                  Нет данных за период
+                  {t('supplierRanking.noData')}
                 </td>
               </tr>
             ) : (
@@ -103,12 +105,12 @@ export default function SupplierRankingTable({ data, loading, onSupplierClick }:
           <tr className="border-b border-slate-200 bg-slate-50">
             {(
               [
-                ['name', 'Поставщик'],
-                ['avg_price', 'Средняя цена'],
-                ['min_price', 'Мин. цена'],
-                ['delivery_count', 'Поставок'],
-                ['price_stability', 'Стабильность'],
-                ['score', 'Рейтинг'],
+                ['name', t('supplierRanking.supplier')],
+                ['avg_price', t('supplierRanking.avgPrice')],
+                ['min_price', t('supplierRanking.minPrice')],
+                ['delivery_count', t('supplierRanking.deliveries')],
+                ['price_stability', t('supplierRanking.stability')],
+                ['score', t('supplierRanking.score')],
               ] as const
             ).map(([key, label]) => (
               <th key={key} className="px-3 py-2 text-left">
@@ -128,7 +130,7 @@ export default function SupplierRankingTable({ data, loading, onSupplierClick }:
           {rows.length === 0 ? (
             <tr>
               <td colSpan={6} className="py-8 text-center text-slate-500">
-                Нет данных за период
+                {t('supplierRanking.noData')}
               </td>
             </tr>
           ) : (

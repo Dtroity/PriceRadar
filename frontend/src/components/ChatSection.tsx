@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocale } from '../i18n/LocaleContext';
 
 type Msg = {
   id: string;
@@ -15,6 +16,7 @@ export function ChatSection({
   token: string;
   senderType: 'supplier' | 'manager';
 }) {
+  const { t, locale } = useLocale();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [text, setText] = useState('');
   const [senderName, setSenderName] = useState('');
@@ -55,7 +57,7 @@ export function ChatSection({
 
   return (
     <div className="border-t pt-4">
-      <h3 className="font-medium mb-3">Переписка</h3>
+      <h3 className="font-medium mb-3">{t('chat.title')}</h3>
       <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
         {messages.map((m) => (
           <div
@@ -66,8 +68,8 @@ export function ChatSection({
             ].join(' ')}
           >
             <p className="font-medium text-xs text-gray-500 mb-1">
-              {m.sender_name || (m.sender_type === 'supplier' ? 'Поставщик' : 'Менеджер')} ·{' '}
-              {new Date(m.created_at).toLocaleString('ru-RU')}
+              {m.sender_name || (m.sender_type === 'supplier' ? t('chat.supplier') : t('chat.manager'))} ·{' '}
+              {new Date(m.created_at).toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US')}
             </p>
             <p>{m.message}</p>
           </div>
@@ -75,7 +77,7 @@ export function ChatSection({
       </div>
       {senderType === 'supplier' && (
         <input
-          placeholder="Ваше имя (необязательно)"
+          placeholder={t('chat.nameOptional')}
           value={senderName}
           onChange={(e) => setSenderName(e.target.value)}
           className="w-full rounded-lg border border-slate-300 px-3 py-2 mb-2 text-sm"
@@ -83,7 +85,7 @@ export function ChatSection({
       )}
       <div className="flex gap-2">
         <input
-          placeholder="Сообщение..."
+          placeholder={t('chat.messagePlaceholder')}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void send()}
@@ -95,7 +97,7 @@ export function ChatSection({
           onClick={() => void send()}
           className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
-          Отправить
+          {t('chat.send')}
         </button>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { request } from '../../api/client';
 import { cn } from '../../lib/cn';
+import { useLocale } from '../../i18n/LocaleContext';
 
 type Dispatch = {
   id: string;
@@ -26,6 +27,7 @@ export default function DispatchChatPanel({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const { t, locale } = useLocale();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,11 +78,11 @@ export default function DispatchChatPanel({
           'fixed right-0 top-0 z-50 h-screen w-full max-w-md bg-white shadow-xl border-l border-slate-200 transition-transform',
           open ? 'translate-x-0' : 'translate-x-full'
         )}
-        aria-label="Dispatch chat"
+        aria-label={t('aria.dispatchChat')}
       >
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div>
-            <p className="text-sm text-slate-500">Переписка</p>
+            <p className="text-sm text-slate-500">{t('chat.title')}</p>
             <p className="font-semibold text-slate-900">{dispatch?.supplier.name ?? '—'}</p>
           </div>
           <button
@@ -88,13 +90,13 @@ export default function DispatchChatPanel({
             className="rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
             onClick={onClose}
           >
-            Закрыть
+            {t('dispatchChat.close')}
           </button>
         </div>
 
         <div className="p-4 space-y-3 overflow-y-auto" style={{ height: 'calc(100vh - 140px)' }}>
           {loading && messages.length === 0 ? (
-            <div className="text-sm text-slate-500">Загрузка…</div>
+            <div className="text-sm text-slate-500">{t('dispatchChat.loading')}</div>
           ) : (
             messages.map((m) => (
               <div
@@ -105,8 +107,8 @@ export default function DispatchChatPanel({
                 ].join(' ')}
               >
                 <p className="font-medium text-xs text-gray-500 mb-1">
-                  {m.sender_name || (m.sender_type === 'supplier' ? 'Поставщик' : 'Менеджер')} ·{' '}
-                  {new Date(m.created_at).toLocaleString('ru-RU')}
+                  {m.sender_name || (m.sender_type === 'supplier' ? t('chat.supplier') : t('chat.manager'))} ·{' '}
+                  {new Date(m.created_at).toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US')}
                 </p>
                 <p>{m.message}</p>
               </div>
@@ -120,7 +122,7 @@ export default function DispatchChatPanel({
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && void send()}
             className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder="Сообщение…"
+            placeholder={t('chat.messagePlaceholder')}
           />
           <button
             type="button"
@@ -128,7 +130,7 @@ export default function DispatchChatPanel({
             onClick={() => void send()}
             className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
-            Отправить
+            {t('chat.send')}
           </button>
         </div>
       </aside>

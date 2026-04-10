@@ -28,7 +28,7 @@ function ItemEditSheet({
 
   return (
     <>
-      <button type="button" className="fixed inset-0 z-[80] bg-black/40" aria-label="Close" onClick={onClose} />
+      <button type="button" className="fixed inset-0 z-[80] bg-black/40" aria-label={t('aria.close')} onClick={onClose} />
       <div className="fixed bottom-0 left-0 right-0 z-[90] max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-[var(--border)] bg-white p-4 shadow-2xl pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-slate-200" />
         <h3 className="mb-4 font-semibold text-slate-900">{item.name || '—'}</h3>

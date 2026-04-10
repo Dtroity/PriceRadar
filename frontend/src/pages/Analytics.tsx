@@ -124,9 +124,9 @@ export default function Analytics() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <h1 className="text-xl font-semibold text-slate-800">Аналитика цен</h1>
+               <h1 className="text-xl font-semibold text-slate-800">{t('analytics.pricePageTitle')}</h1>
         <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 text-sm scrollbar-thin sm:flex-wrap sm:overflow-visible">
-          <span className="hidden shrink-0 self-center text-slate-500 sm:inline">Период:</span>
+          <span className="hidden shrink-0 self-center text-slate-500 sm:inline">{t('analytics.periodLabel')}</span>
           {([30, 90, 180] as const).map((d) => (
             <button
               key={d}
@@ -136,7 +136,7 @@ export default function Analytics() {
                 periodDays === d ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              {d} дн.
+              {d} {t('analytics.dayShort')}
             </button>
           ))}
         </div>
@@ -153,15 +153,15 @@ export default function Analytics() {
                   className="min-h-[48px] w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-left text-sm font-medium text-slate-800 shadow-sm"
                 >
                   {productId
-                    ? displayProductName(products.find((p) => p.id === productId)?.name) || 'Товар'
-                    : '— выберите товар —'}
+                    ? displayProductName(products.find((p) => p.id === productId)?.name) || t('analytics.productLabel')
+                    : t('analytics.pickProduct')}
                 </button>
                 {productPickerOpen && (
                   <>
                     <button
                       type="button"
                       className="fixed inset-0 z-[100] bg-black/50"
-                      aria-label="Close"
+                      aria-label={t('aria.close')}
                       onClick={() => setProductPickerOpen(false)}
                     />
                     <div className="fixed inset-x-0 bottom-0 z-[110] max-h-[70vh] overflow-hidden rounded-t-2xl bg-white shadow-2xl flex flex-col pb-[env(safe-area-inset-bottom)]">
@@ -181,7 +181,7 @@ export default function Analytics() {
                             setProductPickerOpen(false);
                           }}
                         >
-                          — сброс —
+                          {t('analytics.resetPicker')}
                         </button>
                         {products.map((p) => (
                           <button
@@ -214,7 +214,7 @@ export default function Analytics() {
               </>
             ) : (
               <>
-                <label className="text-sm text-slate-600">Товар</label>
+                <label className="text-sm text-slate-600">{t('analytics.productLabel')}</label>
                 <select
                   value={productId}
                   onChange={(e) => {
@@ -228,7 +228,7 @@ export default function Analytics() {
                   }}
                   className="min-h-[44px] min-w-[240px] rounded-lg border border-slate-300 px-3 py-2 text-sm"
                 >
-                  <option value="">— выберите —</option>
+                  <option value="">{t('analytics.selectProductPlaceholder')}</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
                       {displayProductName(p.name)}
@@ -243,7 +243,7 @@ export default function Analytics() {
                 className="tap-target-row text-sm text-slate-600 underline"
                 onClick={() => setSupplierFilter(null)}
               >
-                Сбросить фильтр поставщика
+                {t('analytics.resetSupplierFilter')}
               </button>
             )}
           </div>
@@ -251,9 +251,7 @@ export default function Analytics() {
             data={historyData}
             loading={historyLoading}
             emptyMessage={
-              productId
-                ? 'Нет данных за выбранный период'
-                : 'Выберите товар, чтобы построить график'
+              productId ? t('analytics.chartEmptyNoData') : t('analytics.chartEmptyNoProduct')
             }
           />
         </div>

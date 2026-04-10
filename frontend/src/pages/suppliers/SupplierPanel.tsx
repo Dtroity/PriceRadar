@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, type Supplier } from '../../api/client';
 import { cn } from '../../lib/cn';
+import { useT } from '../../i18n/LocaleContext';
 
 type Filter = { id: string; keyword: string };
 
@@ -17,6 +18,7 @@ export default function SupplierPanel({
   onSupplierUpdated: (s: Supplier) => void;
   onSupplierDeleted: (id: string) => void;
 }) {
+  const t = useT();
   const [tab, setTab] = useState<'contacts' | 'filters'>('contacts');
   const [saving, setSaving] = useState(false);
   const [inviting, setInviting] = useState(false);
@@ -138,7 +140,7 @@ export default function SupplierPanel({
           'fixed right-0 top-0 z-50 h-screen w-full max-w-md bg-white shadow-xl border-l border-slate-200 transition-transform',
           open ? 'translate-x-0' : 'translate-x-full'
         )}
-        aria-label="Supplier panel"
+        aria-label={t('aria.supplierPanel')}
       >
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div>
@@ -293,7 +295,7 @@ export default function SupplierPanel({
                       type="button"
                       onClick={() => void removeKeyword(f.id)}
                       className="text-slate-500 hover:text-slate-900"
-                      aria-label="Remove"
+                      aria-label={t('aria.remove')}
                     >
                       ×
                     </button>

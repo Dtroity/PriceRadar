@@ -5,14 +5,6 @@ import { useLocale } from '../i18n/LocaleContext';
 import LocaleSwitcher from '../components/LocaleSwitcher';
 import { Logo } from '../components/layout/Logo';
 
-const INDUSTRIES = [
-  { value: '', label: '— выберите —' },
-  { value: 'restaurant', label: 'Ресторан' },
-  { value: 'cafe', label: 'Кафе' },
-  { value: 'retail', label: 'Магазин' },
-  { value: 'production', label: 'Производство' },
-];
-
 export default function Register() {
   const [organizationName, setOrganizationName] = useState('');
   const [slug, setSlug] = useState('');
@@ -24,6 +16,13 @@ export default function Register() {
   const { registerOrg } = useAuth();
   const { t } = useLocale();
   const navigate = useNavigate();
+  const industries = [
+    { value: '', label: t('auth.industry.pick') },
+    { value: 'restaurant', label: t('auth.industry.restaurant') },
+    { value: 'cafe', label: t('auth.industry.cafe') },
+    { value: 'retail', label: t('auth.industry.retail') },
+    { value: 'production', label: t('auth.industry.production') },
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +54,7 @@ export default function Register() {
           <Logo size="md" />
         </div>
         <h1 className="text-2xl font-semibold text-slate-800 text-center mb-1">
-          Создать аккаунт Vizor360
+          {t('auth.registerTitle')}
         </h1>
         <p className="text-sm text-slate-500 text-center mb-6">{t('app.tagline')}</p>
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
@@ -70,13 +69,13 @@ export default function Register() {
             className="w-full px-3 py-2 border border-slate-300 rounded-lg mb-4"
             required
           />
-          <label className="block text-sm font-medium text-slate-700 mb-1">Сфера деятельности</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">{t('auth.industryLabel')}</label>
           <select
             value={industry}
             onChange={(e) => setIndustry(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg mb-4 bg-white"
           >
-            {INDUSTRIES.map((o) => (
+            {industries.map((o) => (
               <option key={o.value || '_'} value={o.value}>
                 {o.label}
               </option>
@@ -108,9 +107,9 @@ export default function Register() {
             required
           />
           <p className="text-xs text-slate-600 mb-4 p-2 bg-slate-50 rounded-lg border border-slate-100">
-            Вы начинаете с тарифа <strong>Free</strong>. Расширение — через администратора или{' '}
+            {t('auth.startPlanBlurb').replace('{plan}', t('admin.plan.free'))}{' '}
             <Link to="/pricing" className="underline">
-              тарифы
+              {t('auth.startPlanLink')}
             </Link>
             .
           </p>

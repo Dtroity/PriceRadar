@@ -42,11 +42,11 @@ export default function BottomNav() {
           'fixed bottom-0 left-0 right-0 z-50 flex border-t border-[var(--border)] bg-white/95 backdrop-blur-sm',
           'pb-[env(safe-area-inset-bottom)] md:hidden'
         )}
-        aria-label="Employee"
+        aria-label={t('aria.employeeNav')}
       >
         <NavLink to="/employee" className={itemClass} end>
           <IconCart />
-          <span>Заказ</span>
+          <span>{t('employee.bottomOrder')}</span>
         </NavLink>
         <NavLink to="/documents" className={itemClass}>
           <IconFileText />
@@ -63,7 +63,7 @@ export default function BottomNav() {
           'fixed bottom-0 left-0 right-0 z-50 flex border-t border-[var(--border)] bg-white/95 backdrop-blur-sm',
           'pb-[env(safe-area-inset-bottom)] md:hidden'
         )}
-        aria-label="Main"
+        aria-label={t('aria.mainNav')}
       >
         <NavLink to="/" className={itemClass} end>
           <IconHome />

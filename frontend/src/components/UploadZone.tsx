@@ -19,7 +19,7 @@ export default function UploadZone({ onUpload }: UploadZoneProps) {
     setMessage(null);
     setUploading(true);
     try {
-      await api.upload(file, supplierName || 'Unknown Supplier', 'web');
+      await api.upload(file, supplierName || t('upload.unknownSupplier'), 'web');
       setMessage({ type: 'ok', text: t('upload.queued') });
       setSupplierName('');
       if (inputRef.current) inputRef.current.value = '';

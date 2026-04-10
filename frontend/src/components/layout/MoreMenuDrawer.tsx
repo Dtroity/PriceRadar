@@ -28,7 +28,7 @@ export default function MoreMenuDrawer({ open, onClose }: Props) {
       <button
         type="button"
         className="fixed inset-0 z-[60] bg-black/40 md:hidden"
-        aria-label="Close"
+        aria-label={t('aria.close')}
         onClick={onClose}
       />
       <div

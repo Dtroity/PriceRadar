@@ -86,7 +86,7 @@ export default function Sidebar({ tabletOverlayOpen, onCloseTabletOverlay }: Pro
           'hidden md:flex md:flex-col fixed left-0 top-0 z-30 h-screen border-r border-[var(--border)] bg-white',
           'w-16 lg:w-60'
         )}
-        aria-label="Sidebar"
+        aria-label={t('aria.sidebar')}
       >
         <div className="flex h-14 items-center border-b border-[var(--border)] px-3 lg:px-4">
           <Logo collapsed size="md" className="lg:hidden" />
@@ -112,7 +112,7 @@ export default function Sidebar({ tabletOverlayOpen, onCloseTabletOverlay }: Pro
           <button
             type="button"
             className="fixed inset-0 z-40 bg-black/30 lg:hidden"
-            aria-label="Close menu"
+            aria-label={t('aria.closeMenu')}
             onClick={onCloseTabletOverlay}
           />
           <div className="fixed left-0 top-0 z-50 flex h-full w-60 flex-col bg-white shadow-xl lg:hidden border-r border-[var(--border)]">

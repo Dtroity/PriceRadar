@@ -31,7 +31,7 @@ export default function IngestionJournalSection({ isEmployee, refreshKey = 0 }: 
       const res = await api.ingestion.list(100);
       setItems(res.items);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Error');
+      setErr(e instanceof Error ? e.message : t('ingestion.journalLoadError'));
     } finally {
       setLoading(false);
     }
@@ -47,7 +47,7 @@ export default function IngestionJournalSection({ isEmployee, refreshKey = 0 }: 
       await api.ingestion.remove(id);
       await load();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Delete failed');
+      setErr(e instanceof Error ? e.message : t('ingestion.deleteFailed'));
     }
   };
 

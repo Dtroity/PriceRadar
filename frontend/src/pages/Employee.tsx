@@ -9,7 +9,7 @@ type Product = { id: string; name: string; unit?: string | null };
 
 export default function EmployeePage() {
   const { user } = useAuth();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [qty, setQty] = useState<Record<string, number>>({});
@@ -46,7 +46,7 @@ export default function EmployeePage() {
     try {
       await request('/procurement/orders', {
         method: 'POST',
-        body: JSON.stringify({ title: 'Заказ сотрудника', items }),
+        body: JSON.stringify({ title: t('employee.orderDraftTitle'), items }),
       });
       setQty({});
       navigate('/employee');
@@ -66,12 +66,14 @@ export default function EmployeePage() {
           >
             {t('employee.ingestionLink')}
           </Link>
-          <span className="text-sm text-slate-500">{new Date().toLocaleDateString('ru-RU')}</span>
+          <span className="text-sm text-slate-500">
+            {new Date().toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US')}
+          </span>
         </div>
       </div>
 
       {loading ? (
-        <div className="p-4 text-slate-500">Загрузка…</div>
+        <div className="p-4 text-slate-500">{t('employee.loading')}</div>
       ) : (
         <div className="divide-y bg-white">
           {products.map((product) => (
@@ -111,7 +113,9 @@ export default function EmployeePage() {
           disabled={totalItems === 0 || submitting}
           onClick={() => void handleSubmit()}
         >
-          Отправить заказ{totalItems > 0 ? ` (${totalItems} позиций)` : ''}
+          {totalItems > 0
+            ? t('employee.submitOrderItems').replace('{n}', String(totalItems))
+            : t('employee.submitOrder')}
         </button>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { request } from '../api/client';
 import NotificationMatrix from '../components/notifications/NotificationMatrix';
+import { useT } from '../i18n/LocaleContext';
 
 type Settings = {
   notify_email: string | null;
@@ -14,6 +15,7 @@ type Settings = {
 };
 
 export default function NotificationsSettings() {
+  const t = useT();
   const [s, setS] = useState<Settings | null>(null);
   const [vapid, setVapid] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
@@ -36,7 +38,7 @@ export default function NotificationsSettings() {
     setErr('');
     try {
       await request('/notifications/settings', { method: 'PATCH', body: JSON.stringify(patch) });
-      setMsg('Сохранено');
+      setMsg(t('notificationsSettings.saved'));
       load();
     } catch (e) {
       setErr(String((e as Error).message));
@@ -47,7 +49,7 @@ export default function NotificationsSettings() {
     setErr('');
     try {
       await request('/notifications/test', { method: 'POST', body: JSON.stringify({}) });
-      setMsg('Тест отправлен');
+      setMsg(t('notificationsSettings.testSent'));
     } catch (e) {
       setErr(String((e as Error).message));
     }
@@ -55,11 +57,11 @@ export default function NotificationsSettings() {
 
   const enablePush = async () => {
     if (!vapid) {
-      setErr('VAPID не настроен на сервере');
+      setErr(t('notificationsSettings.errVapid'));
       return;
     }
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      setErr('Браузер не поддерживает Push');
+      setErr(t('notificationsSettings.errNoPush'));
       return;
     }
     try {
@@ -80,21 +82,27 @@ export default function NotificationsSettings() {
           auth: enc(auth),
         }),
       });
-      setMsg('Подписка сохранена');
+      setMsg(t('notificationsSettings.subscribeSaved'));
       load();
     } catch (e) {
       setErr(String((e as Error).message));
     }
   };
 
-  if (!s) return <div className="p-6 text-slate-500">Загрузка…</div>;
+  if (!s) return <div className="p-6 text-slate-500">{t('common.loading')}</div>;
+
+  const orgEventLabel = (k: string) => {
+    const key = `notifications.orgEvent.${k}`;
+    const lbl = t(key);
+    return lbl === key ? k : lbl;
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">Уведомления</h1>
+        <h1 className="text-2xl font-semibold">{t('notificationsSettings.title')}</h1>
         <Link to="/settings" className="text-sm underline text-slate-600">
-          Назад
+          {t('notificationsSettings.back')}
         </Link>
       </div>
       {(msg || err) && (
@@ -104,7 +112,7 @@ export default function NotificationsSettings() {
       )}
 
       <section className="border border-slate-200 rounded-lg p-4 bg-white space-y-3">
-        <h2 className="font-medium">Email</h2>
+        <h2 className="font-medium">{t('notificationsSettings.sectionEmail')}</h2>
         <input
           type="email"
           className="w-full border rounded px-3 py-2"
@@ -118,7 +126,7 @@ export default function NotificationsSettings() {
             checked={s.notify_email_enabled}
             onChange={(e) => save({ notify_email_enabled: e.target.checked })}
           />
-          Включить email-уведомления
+          {t('notificationsSettings.emailEnable')}
         </label>
         <button
           type="button"
@@ -128,15 +136,15 @@ export default function NotificationsSettings() {
             save({ notify_email: el?.value || null, notify_email_enabled: true });
           }}
         >
-          Сохранить email
+          {t('notificationsSettings.saveEmail')}
         </button>
       </section>
 
       <NotificationMatrix />
 
       <section className="border border-slate-200 rounded-lg p-4 bg-white space-y-3">
-        <h2 className="font-medium">VK Notify</h2>
-        <p className="text-xs text-slate-500">Номер должен быть привязан к аккаунту ВКонтакте. Нужен модуль notifications_vk.</p>
+        <h2 className="font-medium">{t('notificationsSettings.sectionVk')}</h2>
+        <p className="text-xs text-slate-500">{t('notificationsSettings.vkHint')}</p>
         <input
           type="tel"
           className="w-full border rounded px-3 py-2"
@@ -150,7 +158,7 @@ export default function NotificationsSettings() {
             checked={s.vk_notify_enabled}
             onChange={(e) => save({ vk_notify_enabled: e.target.checked })}
           />
-          Включить VK Notify
+          {t('notificationsSettings.vkEnable')}
         </label>
         <button
           type="button"
@@ -160,16 +168,18 @@ export default function NotificationsSettings() {
             save({ vk_notify_phone: el?.value || null });
           }}
         >
-          Сохранить телефон
+          {t('notificationsSettings.savePhone')}
         </button>
       </section>
 
       <section className="border border-slate-200 rounded-lg p-4 bg-white space-y-3">
-        <h2 className="font-medium">Web Push</h2>
+        <h2 className="font-medium">{t('notificationsSettings.sectionWebPush')}</h2>
         <button type="button" className="px-3 py-2 bg-slate-800 text-white rounded text-sm" onClick={enablePush}>
-          Включить уведомления в браузере
+          {t('notificationsSettings.enableBrowserPush')}
         </button>
-        <p className="text-xs text-slate-500">Устройств подписано: {s.webpush_subscriptions?.length ?? 0}</p>
+        <p className="text-xs text-slate-500">
+          {t('notificationsSettings.devicesCount')} {s.webpush_subscriptions?.length ?? 0}
+        </p>
         <ul className="text-xs space-y-1">
           {(s.webpush_subscriptions ?? []).map((sub) => (
             <li key={sub.id} className="flex justify-between gap-2 border-t pt-1">
@@ -184,7 +194,7 @@ export default function NotificationsSettings() {
                   }).then(load)
                 }
               >
-                Удалить
+                {t('procurement.removeLine')}
               </button>
             </li>
           ))}
@@ -192,18 +202,18 @@ export default function NotificationsSettings() {
       </section>
 
       <section className="border border-amber-200 bg-amber-50 rounded-lg p-4 space-y-2">
-        <h2 className="font-medium text-amber-900">Telegram (legacy)</h2>
+        <h2 className="font-medium text-amber-900">{t('notificationsSettings.sectionTelegramLegacy')}</h2>
         <p className="text-sm text-amber-900/90">
-          Telegram может быть недоступен в РФ. Рекомендуем Email или VK Notify. Настройки — в разделе{' '}
+          {t('notificationsSettings.telegramLegacyLead')}{' '}
           <Link to="/settings/telegram" className="underline">
-            Telegram
+            {t('nav.telegram')}
           </Link>
           .
         </p>
       </section>
 
       <section className="border border-slate-200 rounded-lg p-4 bg-white space-y-2">
-        <h2 className="font-medium">События</h2>
+        <h2 className="font-medium">{t('notificationsSettings.sectionEvents')}</h2>
         {Object.entries(s.notify_events ?? {}).map(([k, v]) => (
           <label key={k} className="flex items-center gap-2 text-sm">
             <input
@@ -215,13 +225,13 @@ export default function NotificationsSettings() {
                 })
               }
             />
-            {k}
+            {orgEventLabel(k)}
           </label>
         ))}
       </section>
 
       <button type="button" className="px-4 py-2 border rounded" onClick={test}>
-        Отправить тестовое уведомление
+        {t('notificationsSettings.sendTest')}
       </button>
     </div>
   );

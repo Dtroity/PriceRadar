@@ -40,17 +40,17 @@ export default function Login() {
         <Logo size="md" />
         <div>
           <h1 className="mb-6 text-4xl font-semibold leading-tight">
-            Полный контроль
+            {t('auth.loginHeroTitle1')}
             <br />
-            закупок и цен
+            {t('auth.loginHeroTitle2')}
           </h1>
           <ul className="space-y-3 text-zinc-400">
-            <li className="flex gap-3"><span className="text-indigo-500">✦</span>Автоматическое распознавание накладных</li>
-            <li className="flex gap-3"><span className="text-indigo-500">✦</span>Мониторинг цен и аномалий в реальном времени</li>
-            <li className="flex gap-3"><span className="text-indigo-500">✦</span>AI-рекомендации по закупкам</li>
+            <li className="flex gap-3"><span className="text-indigo-500">✦</span>{t('auth.loginHeroBullet1')}</li>
+            <li className="flex gap-3"><span className="text-indigo-500">✦</span>{t('auth.loginHeroBullet2')}</li>
+            <li className="flex gap-3"><span className="text-indigo-500">✦</span>{t('auth.loginHeroBullet3')}</li>
           </ul>
         </div>
-        <p className="text-xs text-zinc-600">© 2025 Vizor360. Все права защищены.</p>
+        <p className="text-xs text-zinc-600">{t('auth.loginHeroCopyright')}</p>
       </div>
 
       <div className="relative flex items-center justify-center p-8">
@@ -61,8 +61,8 @@ export default function Login() {
           <div className="mb-8 flex justify-center lg:hidden">
             <Logo size="md" />
           </div>
-          <h2 className="mb-1 text-2xl font-semibold text-slate-900">Вход в систему</h2>
-          <p className="mb-6 text-sm text-[var(--text-secondary)]">Введите данные вашей организации</p>
+          <h2 className="mb-1 text-2xl font-semibold text-slate-900">{t('auth.loginFormTitle')}</h2>
+          <p className="mb-6 text-sm text-[var(--text-secondary)]">{t('auth.loginFormLead')}</p>
           <form
             onSubmit={handleSubmit}
             className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
