@@ -23,6 +23,7 @@ import * as iikoIntegrationController from '../controllers/iikoIntegrationContro
 import * as adminController from '../controllers/adminController.js';
 import * as notificationsController from '../controllers/notificationsController.js';
 import * as publicOrderController from '../controllers/publicOrderController.js';
+import * as usersAdminController from '../controllers/usersAdminController.js';
 import { sentryUserMiddleware } from '../middleware/sentryUserMiddleware.js';
 import { uploadMiddleware, ensureUploadDir } from '../middleware/upload.js';
 import { mountModuleRoutes } from '../modules/registry.js';
@@ -136,6 +137,22 @@ const refreshSchema = z.object({
 const telegramAllowSchema = z.object({
   isAllowed: z.boolean(),
 });
+
+const createOrgUserSchema = z
+  .object({
+    email: z.string().email(),
+    password: z.string().min(6),
+    role: z.enum(['org_admin', 'manager', 'employee', 'supplier']).optional(),
+  })
+  .strict();
+
+const patchUserSchema = z
+  .object({
+    email: z.string().email().nullable().optional(),
+    role: z.enum(['super_admin', 'org_admin', 'manager', 'employee', 'supplier']).nullable().optional(),
+    is_active: z.boolean().nullable().optional(),
+  })
+  .strict();
 
 type RouteDescriptor = {
   method: string;
@@ -275,6 +292,22 @@ router.patch(
   adminController.patchOrgModule
 );
 router.get('/admin/stats', requireRole('super_admin'), adminController.platformStats);
+
+// User management (platform admin)
+router.post(
+  '/admin/organizations/:id/users',
+  requireRole('super_admin'),
+  validateBody(createOrgUserSchema.extend({ role: z.enum(['super_admin', 'org_admin', 'manager', 'employee', 'supplier']).optional() })),
+  usersAdminController.createUserInOrg
+);
+router.patch('/admin/users/:id', requireRole('super_admin'), validateBody(patchUserSchema), usersAdminController.patchAnyUser);
+router.delete('/admin/users/:id', requireRole('super_admin'), usersAdminController.deleteAnyUser);
+
+// User management (org admin)
+router.get('/org/users', requireRole(['super_admin', 'org_admin']), usersAdminController.listOrgUsers);
+router.post('/org/users', requireRole(['super_admin', 'org_admin']), validateBody(createOrgUserSchema), usersAdminController.createOrgUser);
+router.patch('/org/users/:id', requireRole(['super_admin', 'org_admin']), validateBody(patchUserSchema), usersAdminController.patchOrgUser);
+router.delete('/org/users/:id', requireRole(['super_admin', 'org_admin']), usersAdminController.deleteOrgUser);
 
 // Notifications (org)
 router.get('/notifications/settings', notificationsController.getSettings);

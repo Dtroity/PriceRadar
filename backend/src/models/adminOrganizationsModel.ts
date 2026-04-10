@@ -80,7 +80,7 @@ export async function platformStats(): Promise<{
   const { rows: byPlan } = await pool.query<{ plan: string; c: string }>(
     `SELECT COALESCE(plan, 'free') AS plan, COUNT(*)::text AS c FROM organizations GROUP BY COALESCE(plan, 'free')`
   );
-  const orgs_by_plan: Record<string, number> = {};
+  const orgs_by_plan: Record<string, number> = { free: 0, pro: 0, enterprise: 0 };
   for (const r of byPlan) orgs_by_plan[r.plan] = parseInt(r.c, 10);
 
   const { rows: d } = await pool.query<{ c: string }>(

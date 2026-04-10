@@ -37,6 +37,8 @@ export default function Procurement() {
   const [recBusy, setRecBusy] = useState<string | null>(null);
   const [genLoading, setGenLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [orderSort, setOrderSort] = useState<'title' | 'status' | 'created_at'>('created_at');
+  const [orderDir, setOrderDir] = useState<'asc' | 'desc'>('desc');
 
   const load = useCallback(async () => {
     setErr(null);
@@ -63,6 +65,32 @@ export default function Procurement() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const sortedOrders = [...orders].sort((a, b) => {
+    const mul = orderDir === 'asc' ? 1 : -1;
+    if (orderSort === 'title') {
+      const aa = String(a.title ?? '').toLowerCase();
+      const bb = String(b.title ?? '').toLowerCase();
+      return aa.localeCompare(bb, 'ru') * mul;
+    }
+    if (orderSort === 'status') {
+      const aa = String(a.status ?? '');
+      const bb = String(b.status ?? '');
+      return aa.localeCompare(bb, 'ru') * mul;
+    }
+    const ta = new Date(a.created_at).getTime();
+    const tb = new Date(b.created_at).getTime();
+    return (ta - tb) * mul;
+  });
+
+  const onOrderSort = (key: typeof orderSort) => {
+    if (orderSort !== key) {
+      setOrderSort(key);
+      setOrderDir(key === 'created_at' ? 'desc' : 'asc');
+      return;
+    }
+    setOrderDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+  };
 
   const newOrder = async () => {
     setErr(null);
@@ -207,7 +235,7 @@ export default function Procurement() {
             <p className="p-6 text-slate-500">{t('common.loading')}</p>
           ) : bp === 'mobile' ? (
             <div className="flex flex-col gap-3 p-3">
-              {orders.map((o) => {
+              {sortedOrders.map((o) => {
                 const supName =
                   suppliers.find((s) => s.id === o.supplier_id)?.name ?? t('procurement.supplierUnset');
                 return (
@@ -237,14 +265,41 @@ export default function Procurement() {
               <table className="w-full min-w-[520px] text-sm">
                 <thead>
                   <tr className="border-b bg-slate-50">
-                    <th className="px-3 py-2 text-left">{t('procurement.orderTitleCol')}</th>
-                    <th className="px-3 py-2 text-left">{t('documents.status')}</th>
-                    <th className="px-3 py-2 text-left">{t('procurement.created')}</th>
+                    <th className="px-3 py-2 text-left">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 font-medium text-slate-600 hover:text-slate-900"
+                        onClick={() => onOrderSort('title')}
+                      >
+                        {t('procurement.orderTitleCol')}
+                        {orderSort === 'title' ? (orderDir === 'asc' ? '↑' : '↓') : ''}
+                      </button>
+                    </th>
+                    <th className="px-3 py-2 text-left">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 font-medium text-slate-600 hover:text-slate-900"
+                        onClick={() => onOrderSort('status')}
+                      >
+                        {t('documents.status')}
+                        {orderSort === 'status' ? (orderDir === 'asc' ? '↑' : '↓') : ''}
+                      </button>
+                    </th>
+                    <th className="px-3 py-2 text-left">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 font-medium text-slate-600 hover:text-slate-900"
+                        onClick={() => onOrderSort('created_at')}
+                      >
+                        {t('procurement.created')}
+                        {orderSort === 'created_at' ? (orderDir === 'asc' ? '↑' : '↓') : ''}
+                      </button>
+                    </th>
                     <th className="px-3 py-2 text-left" />
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map((o) => (
+                  {sortedOrders.map((o) => (
                     <tr key={o.id} className="h-12 border-b border-slate-100 md:h-14">
                       <td className="px-3 py-2">
                         <Link className="font-medium text-slate-900 hover:underline" to={`/procurement/orders/${o.id}`}>

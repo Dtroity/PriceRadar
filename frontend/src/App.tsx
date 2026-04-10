@@ -18,6 +18,7 @@ import Products from './pages/Products';
 import Integrations from './pages/Integrations';
 import Settings from './pages/Settings';
 import TelegramAdmin from './pages/TelegramAdmin';
+import OrganizationUsers from './pages/OrganizationUsers';
 import ProcurementRecommendations from './pages/procurement/Recommendations';
 import ProcurementOrders from './pages/procurement/Orders';
 import Procurement from './pages/procurement/Procurement';
@@ -98,6 +99,7 @@ export default function App() {
                   <Route path="notifications" element={<NotificationsSettings />} />
                   <Route path="integrations" element={<Integrations />} />
                   <Route path="telegram" element={<TelegramAdmin />} />
+                  <Route path="users" element={<OrganizationUsers />} />
                   <Route path="admin" element={<Admin />} />
                   <Route path="admin/org/:id" element={<AdminOrgDetail />} />
                 </Route>

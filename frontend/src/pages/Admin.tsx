@@ -76,7 +76,7 @@ export default function Admin() {
         <>
           <input
             type="search"
-            placeholder="Поиск по имени / slug"
+            placeholder="Поиск по имени"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             className="w-full max-w-md border border-slate-300 rounded-lg px-3 py-2"
@@ -133,9 +133,26 @@ export default function Admin() {
           </div>
           <div className="md:col-span-3 bg-white border border-slate-200 rounded-lg p-4">
             <div className="text-slate-500 text-sm mb-2">По тарифам</div>
-            <pre className="text-xs bg-slate-50 p-2 rounded overflow-auto">
-              {JSON.stringify((stats as { orgs_by_plan: Record<string, number> }).orgs_by_plan, null, 2)}
-            </pre>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-slate-600">
+                  <tr className="border-b border-slate-200">
+                    <th className="py-2 pr-3">Тариф</th>
+                    <th className="py-2 pr-3">Организаций</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(['free', 'pro', 'enterprise'] as const).map((k) => (
+                    <tr key={k} className="border-b border-slate-100">
+                      <td className="py-2 pr-3 font-medium">{k}</td>
+                      <td className="py-2 pr-3">
+                        {((stats as { orgs_by_plan: Record<string, number> }).orgs_by_plan?.[k] ?? 0) as number}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

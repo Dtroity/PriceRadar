@@ -28,6 +28,14 @@ export default function Settings() {
         >
           Telegram: пользователи и настройки
         </Link>
+        {(user?.role === 'org_admin' || user?.role === 'super_admin') && (
+          <Link
+            to="/settings/users"
+            className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-800 hover:bg-slate-50"
+          >
+            Пользователи организации
+          </Link>
+        )}
         {user?.role === 'super_admin' && (
           <Link
             to="/settings/admin"

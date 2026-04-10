@@ -20,7 +20,15 @@ export default function Suppliers({ embedded = false }: { embedded?: boolean }) 
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [sort, setSort] = useState<'name' | 'filters_desc' | 'filters_asc'>('name');
+  const [sort, setSort] = useState<
+    | 'name'
+    | 'contact_name'
+    | 'email'
+    | 'notify_channel'
+    | 'filters_desc'
+    | 'filters_asc'
+    | 'is_active'
+  >('name');
 
   useEffect(() => {
     let cancelled = false;
@@ -51,11 +59,30 @@ export default function Suppliers({ embedded = false }: { embedded?: boolean }) 
       return s.name.toLowerCase().includes(q) || email.includes(q) || contact.includes(q) || tg.includes(q);
     })
     .sort((a, b) => {
-      if (sort === 'name') return a.name.localeCompare(b.name);
+      if (sort === 'name') return a.name.localeCompare(b.name, 'ru');
+      if (sort === 'contact_name') {
+        const aa = String((a as any).contact_name ?? '');
+        const bb = String((b as any).contact_name ?? '');
+        return aa.localeCompare(bb, 'ru');
+      }
+      if (sort === 'email') {
+        const aa = String((a as any).email ?? '');
+        const bb = String((b as any).email ?? '');
+        return aa.localeCompare(bb, 'ru');
+      }
+      if (sort === 'notify_channel') {
+        const aa = String((a as any).notify_channel ?? '');
+        const bb = String((b as any).notify_channel ?? '');
+        return aa.localeCompare(bb, 'ru');
+      }
       const fa = Number((a as any).filters_count ?? 0);
       const fb = Number((b as any).filters_count ?? 0);
       return sort === 'filters_asc' ? fa - fb : fb - fa;
     });
+
+  const thBtn = 'inline-flex items-center gap-1 text-left font-medium text-slate-600 hover:text-slate-900';
+  const arrow = (on: boolean, dir: 'asc' | 'desc') => (on ? (dir === 'asc' ? '↑' : '↓') : '');
+  const onSort = (next: typeof sort) => setSort(next);
 
   const onSupplierUpdated = (s: Supplier) => {
     setSuppliers((prev) => prev.map((p) => (p.id === s.id ? { ...p, ...s } : p)));
@@ -133,10 +160,12 @@ export default function Suppliers({ embedded = false }: { embedded?: boolean }) 
           />
           <select
             value={sort}
-            onChange={(e) => setSort(e.target.value as 'name' | 'filters_desc' | 'filters_asc')}
+            onChange={(e) => setSort(e.target.value as any)}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
           >
             <option value="name">Сортировка: по имени</option>
+            <option value="contact_name">Сортировка: по контакту</option>
+            <option value="email">Сортировка: по email</option>
             <option value="filters_desc">Сортировка: больше фильтров сверху</option>
             <option value="filters_asc">Сортировка: меньше фильтров сверху</option>
           </select>
@@ -145,12 +174,32 @@ export default function Suppliers({ embedded = false }: { embedded?: boolean }) 
           <table className="min-w-[920px] w-full text-sm">
             <thead className="bg-slate-50 text-slate-600">
               <tr>
-                <th className="text-left font-medium px-4 py-3">Поставщик</th>
-                <th className="text-left font-medium px-4 py-3">Контакт</th>
-                <th className="text-left font-medium px-4 py-3">Email</th>
-                <th className="text-left font-medium px-4 py-3">Канал</th>
-                <th className="text-left font-medium px-4 py-3">Фильтры</th>
-                <th className="text-left font-medium px-4 py-3">Статус</th>
+                <th className="text-left px-4 py-3">
+                  <button type="button" className={thBtn} onClick={() => onSort('name')}>
+                    Поставщик {arrow(sort === 'name', 'asc')}
+                  </button>
+                </th>
+                <th className="text-left px-4 py-3">
+                  <button type="button" className={thBtn} onClick={() => onSort('contact_name')}>
+                    Контакт {arrow(sort === 'contact_name', 'asc')}
+                  </button>
+                </th>
+                <th className="text-left px-4 py-3">
+                  <button type="button" className={thBtn} onClick={() => onSort('email')}>
+                    Email {arrow(sort === 'email', 'asc')}
+                  </button>
+                </th>
+                <th className="text-left px-4 py-3">
+                  <button type="button" className={thBtn} onClick={() => onSort('notify_channel')}>
+                    Канал {arrow(sort === 'notify_channel', 'asc')}
+                  </button>
+                </th>
+                <th className="text-left px-4 py-3">
+                  <button type="button" className={thBtn} onClick={() => onSort(sort === 'filters_desc' ? 'filters_asc' : 'filters_desc')}>
+                    Фильтры {sort === 'filters_desc' ? '↓' : sort === 'filters_asc' ? '↑' : ''}
+                  </button>
+                </th>
+                <th className="text-left px-4 py-3">Статус</th>
               </tr>
             </thead>
             <tbody className="divide-y">

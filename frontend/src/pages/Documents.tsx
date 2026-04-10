@@ -124,6 +124,10 @@ export default function Documents() {
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [journalKey, setJournalKey] = useState(0);
+  const [sortKey, setSortKey] = useState<
+    'document_number' | 'supplier_name' | 'document_date' | 'status' | 'ocr' | 'confidence' | 'total_amount'
+  >('document_date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const load = async () => {
     const status = statusFilter || undefined;
@@ -140,6 +144,47 @@ export default function Documents() {
 
   const statusLabel = (s: string) => (s ? t('documents.' + s) : t('documents.allStatuses'));
 
+  const sortedDocuments = [...documents].sort((a, b) => {
+    const mul = sortDir === 'asc' ? 1 : -1;
+    if (sortKey === 'document_number') {
+      return String(a.document_number ?? '').localeCompare(String(b.document_number ?? ''), 'ru') * mul;
+    }
+    if (sortKey === 'supplier_name') {
+      return String(a.supplier_name ?? '').localeCompare(String(b.supplier_name ?? ''), 'ru') * mul;
+    }
+    if (sortKey === 'status') {
+      return String(a.status ?? '').localeCompare(String(b.status ?? ''), 'ru') * mul;
+    }
+    if (sortKey === 'document_date') {
+      const ta = a.document_date ? new Date(a.document_date).getTime() : 0;
+      const tb = b.document_date ? new Date(b.document_date).getTime() : 0;
+      return (ta - tb) * mul;
+    }
+    if (sortKey === 'ocr') {
+      const aa = a.status === 'ocr_failed' ? -1 : a.ocr_confidence ?? -2;
+      const bb = b.status === 'ocr_failed' ? -1 : b.ocr_confidence ?? -2;
+      return (aa - bb) * mul;
+    }
+    if (sortKey === 'confidence') {
+      return ((a.confidence ?? -1) - (b.confidence ?? -1)) * mul;
+    }
+    const aa = a.total_amount ?? -1;
+    const bb = b.total_amount ?? -1;
+    return (aa - bb) * mul;
+  });
+
+  const onSort = (k: typeof sortKey) => {
+    if (sortKey !== k) {
+      setSortKey(k);
+      setSortDir(k === 'document_date' ? 'desc' : 'asc');
+      return;
+    }
+    setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+  };
+
+  const sortArrow = (k: typeof sortKey) => (sortKey === k ? (sortDir === 'asc' ? '↑' : '↓') : '');
+  const thBtn = 'inline-flex items-center gap-1 font-medium text-slate-600 hover:text-slate-900';
+
   const listBody = loading ? (
     <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500">
       {t('documents.loading')}
@@ -150,7 +195,7 @@ export default function Documents() {
     </div>
   ) : bp === 'mobile' ? (
     <div className="flex flex-col gap-3">
-      {documents.map((d) => (
+      {sortedDocuments.map((d) => (
         <DocumentCard key={d.id} doc={d} t={t} onOpen={() => navigate(`/documents/${d.id}`)} />
       ))}
     </div>
@@ -160,18 +205,46 @@ export default function Documents() {
         <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50">
-              <th className="px-3 py-2 text-left">{t('documents.number')}</th>
-              <th className="px-3 py-2 text-left">{t('documents.supplier')}</th>
-              <th className="px-3 py-2 text-left">{t('documents.date')}</th>
-              <th className="px-3 py-2 text-left">{t('documents.status')}</th>
-              <th className="px-3 py-2 text-left">{t('documents.ocrQuality')}</th>
-              <th className="px-3 py-2 text-left">{t('documents.confidence')}</th>
-              <th className="px-3 py-2 text-left">{t('documents.total')}</th>
+              <th className="px-3 py-2 text-left">
+                <button type="button" className={thBtn} onClick={() => onSort('document_number')}>
+                  {t('documents.number')} {sortArrow('document_number')}
+                </button>
+              </th>
+              <th className="px-3 py-2 text-left">
+                <button type="button" className={thBtn} onClick={() => onSort('supplier_name')}>
+                  {t('documents.supplier')} {sortArrow('supplier_name')}
+                </button>
+              </th>
+              <th className="px-3 py-2 text-left">
+                <button type="button" className={thBtn} onClick={() => onSort('document_date')}>
+                  {t('documents.date')} {sortArrow('document_date')}
+                </button>
+              </th>
+              <th className="px-3 py-2 text-left">
+                <button type="button" className={thBtn} onClick={() => onSort('status')}>
+                  {t('documents.status')} {sortArrow('status')}
+                </button>
+              </th>
+              <th className="px-3 py-2 text-left">
+                <button type="button" className={thBtn} onClick={() => onSort('ocr')}>
+                  {t('documents.ocrQuality')} {sortArrow('ocr')}
+                </button>
+              </th>
+              <th className="px-3 py-2 text-left">
+                <button type="button" className={thBtn} onClick={() => onSort('confidence')}>
+                  {t('documents.confidence')} {sortArrow('confidence')}
+                </button>
+              </th>
+              <th className="px-3 py-2 text-left">
+                <button type="button" className={thBtn} onClick={() => onSort('total_amount')}>
+                  {t('documents.total')} {sortArrow('total_amount')}
+                </button>
+              </th>
               <th className="px-3 py-2 text-left" />
             </tr>
           </thead>
           <tbody>
-            {documents.map((d) => (
+            {sortedDocuments.map((d) => (
               <tr key={d.id} className="h-12 border-b border-slate-100 md:h-14 hover:bg-slate-50">
                 <td className="px-3 py-2">{d.document_number || '—'}</td>
                 <td className="px-3 py-2">{d.supplier_name || '—'}</td>

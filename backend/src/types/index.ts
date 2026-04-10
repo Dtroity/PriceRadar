@@ -15,6 +15,7 @@ export interface User {
   organization_id: string;
   email: string;
   role: UserRole;
+  is_active?: boolean;
   created_at: Date;
 }
 

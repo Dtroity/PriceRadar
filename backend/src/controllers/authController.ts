@@ -64,6 +64,9 @@ export async function login(req: Request, res: Response) {
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+    if ((user as { is_active?: boolean }).is_active === false) {
+      return res.status(403).json({ error: 'User is blocked' });
+    }
     const accessToken = signAccessToken(user.id, user.email, user.role);
     const refreshToken = signRefreshToken(user.id, user.email, user.role);
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
@@ -96,6 +99,9 @@ export async function refresh(req: Request, res: Response) {
     }
     const user = await users.findUserById(payload.userId);
     if (!user) return res.status(401).json({ error: 'User not found' });
+    if ((user as { is_active?: boolean }).is_active === false) {
+      return res.status(403).json({ error: 'User is blocked' });
+    }
     const accessToken = signAccessToken(
       user.id,
       user.email,
@@ -127,6 +133,9 @@ export async function me(req: AuthRequest, res: Response) {
     ? await usersMt.findUserById(req.user.userId)
     : await usersModel.findUserById(req.user.userId);
   if (!user) return res.status(404).json({ error: 'User not found' });
+  if ((user as { is_active?: boolean }).is_active === false) {
+    return res.status(403).json({ error: 'User is blocked' });
+  }
   return res.json({ user });
 }
 
@@ -227,6 +236,9 @@ export async function loginWithOrg(req: Request, res: Response) {
     const user = await usersMt.findUserByEmailAndOrg(org.id, email);
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    if ((user as { is_active?: boolean }).is_active === false) {
+      return res.status(403).json({ error: 'User is blocked' });
     }
     const accessToken = signAccessToken(user.id, user.email, user.role, org.id);
     const refreshToken = signRefreshToken(user.id, user.email, user.role, org.id);

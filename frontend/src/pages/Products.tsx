@@ -30,6 +30,11 @@ export default function Products() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState('');
 
+  const [productsSortKey, setProductsSortKey] = useState<'name' | 'id' | 'normalized_name'>('name');
+  const [productsSortDir, setProductsSortDir] = useState<'asc' | 'desc'>('asc');
+  const [itemsSortKey, setItemsSortKey] = useState<'raw_name' | 'normalized_name' | 'usage_count'>('usage_count');
+  const [itemsSortDir, setItemsSortDir] = useState<'asc' | 'desc'>('desc');
+
   const selectedNames = useMemo(
     () => items.filter((i) => selected[i.id]).map((i) => i.raw_name),
     [items, selected]
@@ -39,6 +44,45 @@ export default function Products() {
     () => products.filter((p) => mergeSources[p.id]).map((p) => p.id),
     [products, mergeSources]
   );
+
+  const thBtn = 'inline-flex items-center gap-1 font-medium text-slate-600 hover:text-slate-900';
+  const sortArrow = (on: boolean, dir: 'asc' | 'desc') => (on ? (dir === 'asc' ? '↑' : '↓') : '');
+
+  const sortedProducts = [...products].sort((a, b) => {
+    const mul = productsSortDir === 'asc' ? 1 : -1;
+    if (productsSortKey === 'id') return a.id.localeCompare(b.id, 'ru') * mul;
+    if (productsSortKey === 'normalized_name') {
+      return displayProductName(a.normalized_name).localeCompare(displayProductName(b.normalized_name), 'ru') * mul;
+    }
+    return displayProductName(a.name).localeCompare(displayProductName(b.name), 'ru') * mul;
+  });
+
+  const onProductsSort = (k: typeof productsSortKey) => {
+    if (productsSortKey !== k) {
+      setProductsSortKey(k);
+      setProductsSortDir(k === 'id' ? 'asc' : 'asc');
+      return;
+    }
+    setProductsSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+  };
+
+  const sortedItems = [...items].sort((a, b) => {
+    const mul = itemsSortDir === 'asc' ? 1 : -1;
+    if (itemsSortKey === 'usage_count') return (a.usage_count - b.usage_count) * mul;
+    if (itemsSortKey === 'normalized_name') {
+      return displayProductName(a.normalized_name).localeCompare(displayProductName(b.normalized_name), 'ru') * mul;
+    }
+    return displayProductName(a.raw_name).localeCompare(displayProductName(b.raw_name), 'ru') * mul;
+  });
+
+  const onItemsSort = (k: typeof itemsSortKey) => {
+    if (itemsSortKey !== k) {
+      setItemsSortKey(k);
+      setItemsSortDir(k === 'usage_count' ? 'desc' : 'asc');
+      return;
+    }
+    setItemsSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+  };
 
   const load = async () => {
     setLoading(true);
@@ -229,13 +273,25 @@ export default function Products() {
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
                 <th className="text-left p-2">{t('products.mergeSources')}</th>
-                <th className="text-left p-2">ID</th>
-                <th className="text-left p-2">{t('stock.product')}</th>
-                <th className="text-left p-2">normalized</th>
+                <th className="text-left p-2">
+                  <button type="button" className={thBtn} onClick={() => onProductsSort('id')}>
+                    ID {sortArrow(productsSortKey === 'id', productsSortDir)}
+                  </button>
+                </th>
+                <th className="text-left p-2">
+                  <button type="button" className={thBtn} onClick={() => onProductsSort('name')}>
+                    {t('stock.product')} {sortArrow(productsSortKey === 'name', productsSortDir)}
+                  </button>
+                </th>
+                <th className="text-left p-2">
+                  <button type="button" className={thBtn} onClick={() => onProductsSort('normalized_name')}>
+                    normalized {sortArrow(productsSortKey === 'normalized_name', productsSortDir)}
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {products.map((p) => (
+              {sortedProducts.map((p) => (
                 <tr key={p.id} className="border-b border-slate-100">
                   <td className="p-2">
                     <input
@@ -401,13 +457,25 @@ export default function Products() {
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
                 <th className="text-left p-2">Выбор</th>
-                <th className="text-left p-2">raw_name</th>
-                <th className="text-left p-2">normalized_name</th>
-                <th className="text-right p-2">Использований</th>
+                <th className="text-left p-2">
+                  <button type="button" className={thBtn} onClick={() => onItemsSort('raw_name')}>
+                    raw_name {sortArrow(itemsSortKey === 'raw_name', itemsSortDir)}
+                  </button>
+                </th>
+                <th className="text-left p-2">
+                  <button type="button" className={thBtn} onClick={() => onItemsSort('normalized_name')}>
+                    normalized_name {sortArrow(itemsSortKey === 'normalized_name', itemsSortDir)}
+                  </button>
+                </th>
+                <th className="text-right p-2">
+                  <button type="button" className={thBtn} onClick={() => onItemsSort('usage_count')}>
+                    Использований {sortArrow(itemsSortKey === 'usage_count', itemsSortDir)}
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {sortedItems.map((item) => (
                 <tr key={item.id} className="border-b border-slate-100">
                   <td className="p-2">
                     <input

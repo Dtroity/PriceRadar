@@ -7,7 +7,7 @@ export async function findUserByEmailAndOrg(
   email: string
 ): Promise<(User & { password_hash: string }) | null> {
   const { rows } = await pool.query(
-    'SELECT id, organization_id, email, password_hash, role, created_at FROM users WHERE organization_id = $1 AND email = $2',
+    'SELECT id, organization_id, email, password_hash, role, is_active, created_at FROM users WHERE organization_id = $1 AND email = $2',
     [organizationId, email]
   );
   return rows[0] ?? null;
@@ -15,7 +15,7 @@ export async function findUserByEmailAndOrg(
 
 export async function findUserById(id: string): Promise<User | null> {
   const { rows } = await pool.query(
-    'SELECT id, organization_id, email, role, created_at FROM users WHERE id = $1',
+    'SELECT id, organization_id, email, role, is_active, created_at FROM users WHERE id = $1',
     [id]
   );
   return rows[0] ?? null;
@@ -30,7 +30,7 @@ export async function createUser(
   const password_hash = await bcrypt.hash(password, 10);
   const { rows } = await pool.query(
     `INSERT INTO users (organization_id, email, password_hash, role) VALUES ($1, $2, $3, $4)
-     RETURNING id, organization_id, email, role, created_at`,
+     RETURNING id, organization_id, email, role, is_active, created_at`,
     [organizationId, email, password_hash, role]
   );
   return rows[0];
