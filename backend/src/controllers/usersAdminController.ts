@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import bcrypt from 'bcryptjs';
-import type { AuthRequest, UserRole } from '../auth/middleware.js';
+import type { AuthRequest } from '../auth/middleware.js';
+import type { UserRole } from '../types/index.js';
 import { pool } from '../db/pool.js';
 import * as audit from '../models/adminAuditModel.js';
 
