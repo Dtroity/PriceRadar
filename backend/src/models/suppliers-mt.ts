@@ -12,6 +12,7 @@ export async function getAllByOrganization(organizationId: string): Promise<Supp
       s.contact_name,
       s.email,
       s.phone,
+      s.telegram_account,
       s.telegram_chat_id,
       s.notify_channel,
       s.is_active,
@@ -38,6 +39,7 @@ export async function getById(id: string, organizationId: string): Promise<Suppl
       contact_name,
       email,
       phone,
+      telegram_account,
       telegram_chat_id,
       notify_channel,
       is_active,
@@ -49,6 +51,14 @@ export async function getById(id: string, organizationId: string): Promise<Suppl
     [id, organizationId]
   );
   return rows[0] ?? null;
+}
+
+export async function deleteById(id: string, organizationId: string): Promise<boolean> {
+  const { rowCount } = await pool.query(
+    'DELETE FROM suppliers WHERE id = $1 AND organization_id = $2',
+    [id, organizationId]
+  );
+  return rowCount > 0;
 }
 
 export async function findOrCreate(

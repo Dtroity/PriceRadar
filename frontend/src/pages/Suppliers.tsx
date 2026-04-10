@@ -47,7 +47,8 @@ export default function Suppliers({ embedded = false }: { embedded?: boolean }) 
       if (!q) return true;
       const email = String((s as any).email ?? '').toLowerCase();
       const contact = String((s as any).contact_name ?? '').toLowerCase();
-      return s.name.toLowerCase().includes(q) || email.includes(q) || contact.includes(q);
+      const tg = String((s as any).telegram_account ?? '').toLowerCase();
+      return s.name.toLowerCase().includes(q) || email.includes(q) || contact.includes(q) || tg.includes(q);
     })
     .sort((a, b) => {
       if (sort === 'name') return a.name.localeCompare(b.name);
@@ -204,6 +205,10 @@ export default function Suppliers({ embedded = false }: { embedded?: boolean }) 
         supplier={selectedFresh}
         onClose={() => setSelected(null)}
         onSupplierUpdated={onSupplierUpdated}
+        onSupplierDeleted={(id) => {
+          setSuppliers((prev) => prev.filter((s) => s.id !== id));
+          setSelected((prev) => (prev?.id === id ? null : prev));
+        }}
       />
     </div>
   );

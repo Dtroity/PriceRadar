@@ -25,6 +25,7 @@ export interface Supplier {
   contact_name?: string | null;
   email?: string | null;
   phone?: string | null;
+  telegram_account?: string | null;
   telegram_chat_id?: string | null;
   notify_channel?: string | null;
   is_active?: boolean | null;

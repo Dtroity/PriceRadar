@@ -44,6 +44,7 @@ export async function patchSupplier(req: AuthRequest, res: Response) {
     contact_name: string | null;
     email: string | null;
     phone: string | null;
+    telegram_account: string | null;
     notify_channel: string | null;
     is_active: boolean | null;
   }>;
@@ -55,16 +56,20 @@ export async function patchSupplier(req: AuthRequest, res: Response) {
     return res.status(400).json({ error: 'Invalid notify_channel' });
   }
 
+  const telegram_account =
+    body.telegram_account == null ? undefined : String(body.telegram_account).trim() || null;
+
   const { rows } = await pool.query(
     `
     UPDATE suppliers SET
       contact_name = COALESCE($3, contact_name),
       email = COALESCE($4, email),
       phone = COALESCE($5, phone),
-      notify_channel = COALESCE($6, notify_channel),
-      is_active = COALESCE($7, is_active)
+      telegram_account = COALESCE($6, telegram_account),
+      notify_channel = COALESCE($7, notify_channel),
+      is_active = COALESCE($8, is_active)
     WHERE id = $1::uuid AND organization_id = $2::uuid
-    RETURNING id, organization_id, name, created_at, contact_name, email, phone, telegram_chat_id, notify_channel, is_active
+    RETURNING id, organization_id, name, created_at, contact_name, email, phone, telegram_account, telegram_chat_id, notify_channel, is_active
     `,
     [
       id,
@@ -72,12 +77,34 @@ export async function patchSupplier(req: AuthRequest, res: Response) {
       body.contact_name ?? null,
       body.email ?? null,
       body.phone ?? null,
+      telegram_account ?? null,
       notify_channel ?? null,
       body.is_active ?? null,
     ]
   );
   if (!rows[0]) return res.status(404).json({ error: 'Not found' });
   return res.json(rows[0]);
+}
+
+export async function deleteSupplier(req: AuthRequest, res: Response) {
+  try {
+    const orgId = req.user?.organizationId;
+    if (!orgId) return res.status(400).json({ error: 'Organization required' });
+    const id = req.params.id;
+
+    const ok = await suppliersMt.deleteById(id, orgId);
+    if (!ok) return res.status(404).json({ error: 'Not found' });
+    return res.json({ ok: true });
+  } catch (err: any) {
+    // FK violations happen if supplier is referenced without ON DELETE behavior.
+    if (err?.code === '23503') {
+      return res.status(409).json({
+        error: 'Cannot delete supplier: it is referenced by other records. Deactivate it instead.',
+      });
+    }
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to delete supplier' });
+  }
 }
 
 export async function listSupplierFilters(req: AuthRequest, res: Response) {

@@ -3,7 +3,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useLocale } from '../../i18n/LocaleContext';
 import { cn } from '../../lib/cn';
 import AnomalyBadge from '../analytics/AnomalyBadge';
-import { IconBarChart, IconCart, IconFileText, IconHome } from './NavIcons';
+import { IconBarChart, IconCart, IconFileText, IconFoodCost, IconHome, IconProducts, IconSettings, IconStock } from './NavIcons';
 import { Logo } from './Logo';
 
 type Props = {
@@ -16,6 +16,10 @@ function NavIcon({ to }: { to: string }) {
   if (to === '/documents') return <IconFileText />;
   if (to === '/analytics') return <IconBarChart />;
   if (to === '/procurement') return <IconCart />;
+  if (to === '/products') return <IconProducts />;
+  if (to === '/foodcost') return <IconFoodCost />;
+  if (to === '/stock') return <IconStock />;
+  if (to === '/settings') return <IconSettings />;
   return (
     <span className="flex h-5 w-5 items-center justify-center rounded bg-slate-200 text-[10px] font-bold text-slate-600">
       {to.slice(1, 2).toUpperCase() || '•'}

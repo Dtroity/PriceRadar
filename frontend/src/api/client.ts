@@ -112,6 +112,7 @@ export const api = {
       contact_name: string | null;
       email: string | null;
       phone: string | null;
+      telegram_account: string | null;
       notify_channel: string | null;
       is_active: boolean | null;
     }>) =>
@@ -119,6 +120,8 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify(body),
       }),
+    remove: (id: string) =>
+      request<{ ok: boolean }>(`/suppliers/${id}`, { method: 'DELETE' }),
     filters: {
       list: (id: string) => request<{ filters: Array<{ id: string; keyword: string }> }>(`/suppliers/${id}/filters`),
       add: (id: string, keyword: string) =>
@@ -326,6 +329,7 @@ export interface Supplier {
   contact_name?: string | null;
   email?: string | null;
   phone?: string | null;
+  telegram_account?: string | null;
   telegram_chat_id?: string | null;
   notify_channel?: string | null;
   is_active?: boolean | null;

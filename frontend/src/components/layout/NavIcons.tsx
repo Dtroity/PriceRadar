@@ -88,3 +88,44 @@ export function IconChevronDown(p: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function IconProducts(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" {...icon(p)}>
+      <path d="M21 8l-9-5-9 5 9 5 9-5z" />
+      <path d="M3 8v8l9 5 9-5V8" />
+      <path d="M12 13v8" />
+    </svg>
+  );
+}
+
+export function IconFoodCost(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" {...icon(p)}>
+      <path d="M8 3h8a2 2 0 0 1 2 2v16H6V5a2 2 0 0 1 2-2z" />
+      <path d="M9 8h6" />
+      <path d="M9 12h6" />
+      <path d="M9 16h2" />
+      <path d="M13 16h2" />
+    </svg>
+  );
+}
+
+export function IconStock(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" {...icon(p)}>
+      <path d="M3 9l9-6 9 6" />
+      <path d="M5 10v11h14V10" />
+      <path d="M9 21v-6h6v6" />
+    </svg>
+  );
+}
+
+export function IconSettings(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" {...icon(p)}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a7.9 7.9 0 0 0 .1-6l-2.1.8a6 6 0 0 0-1.4-1.4l.8-2.1a7.9 7.9 0 0 0-6-.1l.8 2.1a6 6 0 0 0-1.4 1.4L6 8.9a7.9 7.9 0 0 0-.1 6l2.1-.8a6 6 0 0 0 1.4 1.4l-.8 2.1a7.9 7.9 0 0 0 6 .1l-.8-2.1a6 6 0 0 0 1.4-1.4z" />
+    </svg>
+  );
+}

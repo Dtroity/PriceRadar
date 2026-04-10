@@ -9,19 +9,23 @@ export default function SupplierPanel({
   supplier,
   onClose,
   onSupplierUpdated,
+  onSupplierDeleted,
 }: {
   open: boolean;
   supplier: Supplier | null;
   onClose: () => void;
   onSupplierUpdated: (s: Supplier) => void;
+  onSupplierDeleted: (id: string) => void;
 }) {
   const [tab, setTab] = useState<'contacts' | 'filters'>('contacts');
   const [saving, setSaving] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [contactName, setContactName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [telegramAccount, setTelegramAccount] = useState('');
   const [notifyChannel, setNotifyChannel] = useState<'email' | 'telegram' | 'both' | 'none'>('email');
   const [isActive, setIsActive] = useState(true);
 
@@ -34,6 +38,7 @@ export default function SupplierPanel({
     setContactName(String(supplier.contact_name ?? ''));
     setEmail(String(supplier.email ?? ''));
     setPhone(String(supplier.phone ?? ''));
+    setTelegramAccount(String(supplier.telegram_account ?? ''));
     setNotifyChannel((supplier.notify_channel as any) || 'email');
     setIsActive(Boolean(supplier.is_active ?? true));
   }, [supplier]);
@@ -67,6 +72,7 @@ export default function SupplierPanel({
         contact_name: contactName || null,
         email: email || null,
         phone: phone || null,
+        telegram_account: telegramAccount || null,
         notify_channel: notifyChannel,
         is_active: isActive,
       });
@@ -83,6 +89,20 @@ export default function SupplierPanel({
       await api.supplier.invite(supplier.id);
     } finally {
       setInviting(false);
+    }
+  };
+
+  const removeSupplier = async () => {
+    if (!supplier) return;
+    const ok = window.confirm(`Удалить поставщика «${supplier.name}»?\n\nЭто действие необратимо.`);
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      await api.supplier.remove(supplier.id);
+      onSupplierDeleted(supplier.id);
+      onClose();
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -181,6 +201,18 @@ export default function SupplierPanel({
               <p className="mt-1 text-xs text-slate-500">Email обязателен для отправки заказов по почте</p>
             </div>
             <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Telegram аккаунт</label>
+              <input
+                value={telegramAccount}
+                onChange={(e) => setTelegramAccount(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                placeholder="@username или ссылка"
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Это справочная информация о поставщике (не chat_id для бота).
+              </p>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Телефон</label>
               <input
                 value={phone}
@@ -223,6 +255,17 @@ export default function SupplierPanel({
                 className="flex-1 rounded-lg bg-slate-900 text-white px-3 py-2 text-sm font-medium disabled:opacity-50"
               >
                 Сохранить
+              </button>
+            </div>
+
+            <div className="pt-3 border-t">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => void removeSupplier()}
+                className="w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-100 disabled:opacity-50"
+              >
+                {deleting ? 'Удаление…' : 'Удалить поставщика'}
               </button>
             </div>
           </div>
