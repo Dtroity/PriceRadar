@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { request } from '../api/client';
+import { useT } from '../i18n/LocaleContext';
 
 type OrgRow = {
   id: string;
@@ -16,6 +17,7 @@ type OrgRow = {
 
 export default function Admin() {
   const { user, loading } = useAuth();
+  const t = useT();
   const [tab, setTab] = useState<'orgs' | 'stats'>('orgs');
   const [orgs, setOrgs] = useState<OrgRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -45,6 +47,12 @@ export default function Admin() {
 
   if (loading) return <div className="p-6 text-slate-500">Загрузка…</div>;
   if (user?.role !== 'super_admin') return <Navigate to="/" replace />;
+
+  const planTitle = (p: string) => {
+    const k = `admin.plan.${p}`;
+    const label = t(k);
+    return label === k ? p : label;
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-4">
@@ -99,7 +107,7 @@ export default function Admin() {
                   <tr key={o.id} className="border-t border-slate-100">
                     <td className="p-2 font-medium">{o.name}</td>
                     <td className="p-2">
-                      <span className="px-2 py-0.5 rounded bg-slate-100 text-xs uppercase">{o.plan}</span>
+                      <span className="px-2 py-0.5 rounded bg-slate-100 text-xs">{planTitle(o.plan)}</span>
                     </td>
                     <td className="p-2">{o.is_active ? 'да' : 'нет'}</td>
                     <td className="p-2">{o.users_count}</td>
@@ -144,7 +152,7 @@ export default function Admin() {
                 <tbody>
                   {(['free', 'pro', 'enterprise'] as const).map((k) => (
                     <tr key={k} className="border-b border-slate-100">
-                      <td className="py-2 pr-3 font-medium">{k}</td>
+                      <td className="py-2 pr-3 font-medium">{planTitle(k)}</td>
                       <td className="py-2 pr-3">
                         {((stats as { orgs_by_plan: Record<string, number> }).orgs_by_plan?.[k] ?? 0) as number}
                       </td>

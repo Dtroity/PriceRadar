@@ -25,7 +25,7 @@ export default function FoodCost() {
         if (!cancelled) setRows(r.forecast ?? []);
       })
       .catch((e) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load foodcost forecast');
+        if (!cancelled) setError(e instanceof Error ? e.message : t('foodcost.errorLoad'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -33,7 +33,7 @@ export default function FoodCost() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const num = (v: number) =>
     new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
@@ -44,10 +44,10 @@ export default function FoodCost() {
       <p className="text-slate-600">{t('foodcost.description')}</p>
       {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {loading ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500">Загрузка…</div>
+        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500">{t('common.loading')}</div>
       ) : rows.length === 0 ? (
         <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500">
-          Недостаточно данных для прогноза фудкоста. Добавьте рецепты и загрузите прайс-листы.
+          {t('foodcost.empty')}
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -55,11 +55,11 @@ export default function FoodCost() {
             <table className="w-full min-w-[760px] text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Блюдо</th>
-                  <th className="px-4 py-3 text-left font-medium">Себестоимость (текущая)</th>
-                  <th className="px-4 py-3 text-left font-medium">Себестоимость (30д прогноз)</th>
-                  <th className="px-4 py-3 text-left font-medium">Цена продажи</th>
-                  <th className="px-4 py-3 text-left font-medium">Изменение маржи</th>
+                  <th className="px-4 py-3 text-left font-medium">{t('foodcost.colDish')}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t('foodcost.colCurrentCost')}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t('foodcost.colForecast30')}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t('foodcost.colSellingPrice')}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t('foodcost.colMarginChange')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">

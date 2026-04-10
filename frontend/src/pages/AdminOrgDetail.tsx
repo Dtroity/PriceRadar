@@ -2,27 +2,13 @@ import { useEffect, useState } from 'react';
 import { Navigate, Link, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { request } from '../api/client';
-
-const MODULE_KEYS = [
-  'analytics',
-  'anomaly_detection',
-  'procurement',
-  'recommendations',
-  'notifications_email',
-  'notifications_vk',
-  'notifications_push',
-  'ai_features',
-  'invoice_ai',
-  'price_monitoring',
-  'iiko_integration',
-  'telegram_bot',
-  'procurement_autopilot',
-  'stock',
-];
+import { useT } from '../i18n/LocaleContext';
+import { PLATFORM_MODULE_KEYS } from '../config/platformModules';
 
 export default function AdminOrgDetail() {
   const { id } = useParams<{ id: string }>();
   const { user, loading } = useAuth();
+  const t = useT();
   const [data, setData] = useState<{
     org: Record<string, unknown>;
     users: Array<{ id: string; email: string; role: string; is_active?: boolean | null }>;
@@ -87,6 +73,24 @@ export default function AdminOrgDetail() {
   if (!data) return <div className="p-6 text-slate-500">Загрузка…</div>;
 
   const modMap = new Map(data.modules.map((m) => [m.module, m.enabled]));
+  const moduleKeys = Array.from(
+    new Set([...PLATFORM_MODULE_KEYS, ...data.modules.map((m) => m.module)])
+  ).sort((a, b) => a.localeCompare(b, 'en'));
+  const moduleTitle = (key: string) => {
+    const k = `admin.module.${key}`;
+    const label = t(k);
+    return label === k ? key : label;
+  };
+  const roleTitle = (role: string) => {
+    const k = `admin.role.${role}`;
+    const label = t(k);
+    return label === k ? role : label;
+  };
+  const planTitle = (p: string) => {
+    const k = `admin.plan.${p}`;
+    const label = t(k);
+    return label === k ? p : label;
+  };
 
   const patchUser = async (userId: string, body: Partial<{ email: string | null; role: string | null; is_active: boolean | null }>) => {
     setSaving(true);
@@ -149,9 +153,9 @@ export default function AdminOrgDetail() {
           onChange={(e) => setPlan(e.target.value)}
           className="border rounded px-2 py-1"
         >
-          <option value="free">free</option>
-          <option value="pro">pro</option>
-          <option value="enterprise">enterprise</option>
+          <option value="free">{planTitle('free')}</option>
+          <option value="pro">{planTitle('pro')}</option>
+          <option value="enterprise">{planTitle('enterprise')}</option>
         </select>
         <button
           type="button"
@@ -167,7 +171,7 @@ export default function AdminOrgDetail() {
       <section className="bg-white border border-slate-200 rounded-lg p-4">
         <h2 className="font-medium mb-3">Модули</h2>
         <div className="grid sm:grid-cols-2 gap-2 text-sm">
-          {MODULE_KEYS.map((key) => (
+          {moduleKeys.map((key) => (
             <label key={key} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -175,7 +179,7 @@ export default function AdminOrgDetail() {
                 disabled={saving}
                 onChange={(e) => toggleModule(key, e.target.checked)}
               />
-              <span>{key}</span>
+              <span>{moduleTitle(key)}</span>
             </label>
           ))}
         </div>
@@ -202,10 +206,10 @@ export default function AdminOrgDetail() {
               onChange={(e) => setNewRole(e.target.value as any)}
               className="rounded border border-slate-300 px-3 py-2 text-sm"
             >
-              <option value="manager">manager</option>
-              <option value="employee">employee</option>
-              <option value="supplier">supplier</option>
-              <option value="org_admin">org_admin</option>
+              <option value="manager">{roleTitle('manager')}</option>
+              <option value="employee">{roleTitle('employee')}</option>
+              <option value="supplier">{roleTitle('supplier')}</option>
+              <option value="org_admin">{roleTitle('org_admin')}</option>
             </select>
           </div>
           <button
@@ -238,11 +242,11 @@ export default function AdminOrgDetail() {
                         onChange={(e) => void patchUser(u.id, { role: e.target.value })}
                         className="rounded border border-slate-300 px-2 py-1 text-sm"
                       >
-                        <option value="manager">manager</option>
-                        <option value="employee">employee</option>
-                        <option value="supplier">supplier</option>
-                        <option value="org_admin">org_admin</option>
-                        <option value="super_admin">super_admin</option>
+                        <option value="manager">{roleTitle('manager')}</option>
+                        <option value="employee">{roleTitle('employee')}</option>
+                        <option value="supplier">{roleTitle('supplier')}</option>
+                        <option value="org_admin">{roleTitle('org_admin')}</option>
+                        <option value="super_admin">{roleTitle('super_admin')}</option>
                       </select>
                     </td>
                     <td className="py-2 pr-3">

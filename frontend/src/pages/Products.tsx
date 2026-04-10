@@ -3,6 +3,10 @@ import { api, type Product, type ProductAuditEntry, type ProductNormalizationIte
 import { useT } from '../i18n/LocaleContext';
 import { displayProductName } from '../lib/displayProductName';
 
+function fillTemplate(template: string, vars: Record<string, string | number>) {
+  return template.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ''));
+}
+
 export default function Products() {
   const t = useT();
   const [items, setItems] = useState<ProductNormalizationItem[]>([]);
@@ -91,7 +95,7 @@ export default function Products() {
       const res = await api.productNormalization.list();
       setItems(res.items);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load normalization items');
+      setError(e instanceof Error ? e.message : t('products.errorNormalizeList'));
     } finally {
       setLoading(false);
     }
@@ -105,7 +109,7 @@ export default function Products() {
       const res = await api.products();
       setProducts(res.products);
     } catch (e) {
-      setMergeError(e instanceof Error ? e.message : 'Failed to load products');
+      setMergeError(e instanceof Error ? e.message : t('products.errorLoadProducts'));
     } finally {
       setMergeLoading(false);
     }
@@ -121,7 +125,7 @@ export default function Products() {
       setTarget('');
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to normalize products');
+      setError(e instanceof Error ? e.message : t('products.errorNormalizeApply'));
     } finally {
       setLoading(false);
     }
@@ -147,7 +151,7 @@ export default function Products() {
       setMergeSources({});
       await loadProducts();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Merge failed';
+      const msg = e instanceof Error ? e.message : t('products.errorMerge');
       if (msg.toLowerCase().includes('forbidden') || msg.includes('403')) {
         setMergeError(t('products.mergeForbidden'));
       } else {
@@ -166,7 +170,7 @@ export default function Products() {
       const res = await api.getDuplicates();
       setDuplicatePairs(res.pairs);
     } catch (e) {
-      setDupError(e instanceof Error ? e.message : 'Duplicates load failed');
+      setDupError(e instanceof Error ? e.message : t('products.errorDuplicates'));
     } finally {
       setDupLoading(false);
     }
@@ -178,11 +182,11 @@ export default function Products() {
     setDupMessage('');
     try {
       const res = await api.autoMergeProducts();
-      setDupMessage(`Авто-merge: объединено пар — ${res.merged}`);
+      setDupMessage(fillTemplate(t('products.autoMergeResult'), { n: res.merged }));
       await loadDuplicates();
       await loadProducts();
     } catch (e) {
-      setDupError(e instanceof Error ? e.message : 'Auto-merge failed');
+      setDupError(e instanceof Error ? e.message : t('products.errorAutoMerge'));
     } finally {
       setDupLoading(false);
     }
@@ -197,12 +201,15 @@ export default function Products() {
     try {
       await api.productsMerge([newer.id], older.id);
       setDupMessage(
-        `Объединено: ${displayProductName(newer.name)} → ${displayProductName(older.name)}`
+        fillTemplate(t('products.mergePairDone'), {
+          from: displayProductName(newer.name),
+          to: displayProductName(older.name),
+        })
       );
       await loadDuplicates();
       await loadProducts();
     } catch (e) {
-      setDupError(e instanceof Error ? e.message : 'Merge failed');
+      setDupError(e instanceof Error ? e.message : t('products.errorMerge'));
     } finally {
       setDupLoading(false);
     }
@@ -216,7 +223,7 @@ export default function Products() {
       const res = await api.getProductHistory(historyProductId);
       setHistoryRows(res.history);
     } catch (e) {
-      setHistoryError(e instanceof Error ? e.message : 'History load failed');
+      setHistoryError(e instanceof Error ? e.message : t('products.errorHistory'));
       setHistoryRows([]);
     } finally {
       setHistoryLoading(false);
@@ -275,7 +282,7 @@ export default function Products() {
                 <th className="text-left p-2">{t('products.mergeSources')}</th>
                 <th className="text-left p-2">
                   <button type="button" className={thBtn} onClick={() => onProductsSort('id')}>
-                    ID {sortArrow(productsSortKey === 'id', productsSortDir)}
+                    {t('products.colId')} {sortArrow(productsSortKey === 'id', productsSortDir)}
                   </button>
                 </th>
                 <th className="text-left p-2">
@@ -285,7 +292,7 @@ export default function Products() {
                 </th>
                 <th className="text-left p-2">
                   <button type="button" className={thBtn} onClick={() => onProductsSort('normalized_name')}>
-                    normalized {sortArrow(productsSortKey === 'normalized_name', productsSortDir)}
+                    {t('products.colNormalized')} {sortArrow(productsSortKey === 'normalized_name', productsSortDir)}
                   </button>
                 </th>
               </tr>
@@ -321,10 +328,8 @@ export default function Products() {
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
-        <h2 className="text-lg font-medium text-slate-800">Дубли (похожие товары)</h2>
-        <p className="text-sm text-slate-600">
-          Пары с высокой схожестью названий. Ручной merge — в старший по дате создания товар.
-        </p>
+        <h2 className="text-lg font-medium text-slate-800">{t('products.duplicatesTitle')}</h2>
+        <p className="text-sm text-slate-600">{t('products.duplicatesLead')}</p>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -332,7 +337,7 @@ export default function Products() {
             disabled={dupLoading}
             className="px-3 py-2 text-sm rounded bg-slate-800 text-white disabled:opacity-50"
           >
-            Загрузить дубли
+            {t('products.loadDuplicates')}
           </button>
           <button
             type="button"
@@ -340,7 +345,7 @@ export default function Products() {
             disabled={dupLoading}
             className="px-3 py-2 text-sm rounded bg-violet-700 text-white disabled:opacity-50"
           >
-            Авто-merge (≥0.95)
+            {t('products.autoMerge')}
           </button>
         </div>
         {dupError && <p className="text-sm text-red-600">{dupError}</p>}
@@ -349,10 +354,10 @@ export default function Products() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="text-left p-2">Товар 1</th>
-                <th className="text-left p-2">Товар 2</th>
-                <th className="text-right p-2">Схожесть</th>
-                <th className="text-left p-2">Действие</th>
+                <th className="text-left p-2">{t('products.duplicateCol1')}</th>
+                <th className="text-left p-2">{t('products.duplicateCol2')}</th>
+                <th className="text-right p-2">{t('products.similarity')}</th>
+                <th className="text-left p-2">{t('products.action')}</th>
               </tr>
             </thead>
             <tbody>
@@ -368,7 +373,7 @@ export default function Products() {
                       onClick={() => mergeDuplicateRow(row.product1, row.product2)}
                       className="text-xs px-2 py-1 rounded bg-amber-600 text-white disabled:opacity-50"
                     >
-                      Merge
+                      {t('products.mergeRow')}
                     </button>
                   </td>
                 </tr>
@@ -376,7 +381,7 @@ export default function Products() {
               {!duplicatePairs.length && (
                 <tr>
                   <td colSpan={4} className="p-4 text-slate-500">
-                    Нет данных. Нажмите «Загрузить дубли» (нужна роль org_admin).
+                    {t('products.noDuplicates')}
                   </td>
                 </tr>
               )}
@@ -386,14 +391,14 @@ export default function Products() {
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
-        <h2 className="text-lg font-medium text-slate-800">История товара (audit)</h2>
+        <h2 className="text-lg font-medium text-slate-800">{t('products.historyTitle')}</h2>
         <div className="flex flex-wrap gap-2 items-center">
           <select
             value={historyProductId}
             onChange={(e) => setHistoryProductId(e.target.value)}
             className="px-2 py-1 border border-slate-300 rounded text-sm min-w-[220px]"
           >
-            <option value="">— выберите товар —</option>
+            <option value="">{t('products.historyPick')}</option>
             {products.map((p) => (
               <option key={p.id} value={p.id}>
                 {displayProductName(p.name)}
@@ -406,7 +411,7 @@ export default function Products() {
             disabled={historyLoading || !historyProductId}
             className="px-3 py-2 text-sm rounded bg-slate-800 text-white disabled:opacity-50"
           >
-            Загрузить историю
+            {t('products.historyLoad')}
           </button>
         </div>
         {historyError && <p className="text-sm text-red-600">{historyError}</p>}
@@ -426,7 +431,7 @@ export default function Products() {
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
-        <h2 className="text-lg font-medium text-slate-800">Нормализация названий (алиасы)</h2>
+        <h2 className="text-lg font-medium text-slate-800">{t('products.normalizationTitle')}</h2>
         <div className="flex gap-2 items-center">
           <button
             type="button"
@@ -434,12 +439,12 @@ export default function Products() {
             disabled={loading}
             className="px-3 py-2 text-sm rounded bg-slate-800 text-white disabled:opacity-50"
           >
-            Загрузить непонятные товары
+            {t('products.normalizationLoad')}
           </button>
           <input
             value={target}
             onChange={(e) => setTarget(e.target.value)}
-            placeholder="Целевое нормализованное название"
+            placeholder={t('products.normalizationTargetPlaceholder')}
             className="px-3 py-2 border border-slate-300 rounded text-sm flex-1"
           />
           <button
@@ -448,7 +453,7 @@ export default function Products() {
             disabled={loading || !selectedNames.length || !target.trim()}
             className="px-3 py-2 text-sm rounded bg-emerald-700 text-white disabled:opacity-50"
           >
-            Объединить
+            {t('products.normalizationApply')}
           </button>
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -456,20 +461,20 @@ export default function Products() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="text-left p-2">Выбор</th>
+                <th className="text-left p-2">{t('products.colSelect')}</th>
                 <th className="text-left p-2">
                   <button type="button" className={thBtn} onClick={() => onItemsSort('raw_name')}>
-                    raw_name {sortArrow(itemsSortKey === 'raw_name', itemsSortDir)}
+                    {t('products.colRawName')} {sortArrow(itemsSortKey === 'raw_name', itemsSortDir)}
                   </button>
                 </th>
                 <th className="text-left p-2">
                   <button type="button" className={thBtn} onClick={() => onItemsSort('normalized_name')}>
-                    normalized_name {sortArrow(itemsSortKey === 'normalized_name', itemsSortDir)}
+                    {t('products.colNormalizedName')} {sortArrow(itemsSortKey === 'normalized_name', itemsSortDir)}
                   </button>
                 </th>
                 <th className="text-right p-2">
                   <button type="button" className={thBtn} onClick={() => onItemsSort('usage_count')}>
-                    Использований {sortArrow(itemsSortKey === 'usage_count', itemsSortDir)}
+                    {t('products.colUsage')} {sortArrow(itemsSortKey === 'usage_count', itemsSortDir)}
                   </button>
                 </th>
               </tr>
@@ -494,7 +499,7 @@ export default function Products() {
               {!items.length && (
                 <tr>
                   <td className="p-4 text-slate-500" colSpan={4}>
-                    Список пуст. Нажмите &quot;Загрузить непонятные товары&quot;.
+                    {t('products.normalizationEmpty')}
                   </td>
                 </tr>
               )}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { request } from '../api/client';
+import { useT } from '../i18n/LocaleContext';
 
 type OrgUserRow = {
   id: string;
@@ -13,6 +14,7 @@ type OrgUserRow = {
 
 export default function OrganizationUsers() {
   const { user, loading } = useAuth();
+  const t = useT();
   const [rows, setRows] = useState<OrgUserRow[]>([]);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
@@ -38,6 +40,12 @@ export default function OrganizationUsers() {
 
   if (loading) return <div className="p-6 text-slate-500">Загрузка…</div>;
   if (!canManage) return <Navigate to="/settings" replace />;
+
+  const roleTitle = (role: string) => {
+    const k = `admin.role.${role}`;
+    const label = t(k);
+    return label === k ? role : label;
+  };
 
   const createUser = async () => {
     setBusy(true);
@@ -120,10 +128,10 @@ export default function OrganizationUsers() {
             onChange={(e) => setNewRole(e.target.value as any)}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
           >
-            <option value="manager">manager</option>
-            <option value="employee">employee</option>
-            <option value="supplier">supplier</option>
-            <option value="org_admin">org_admin</option>
+            <option value="manager">{roleTitle('manager')}</option>
+            <option value="employee">{roleTitle('employee')}</option>
+            <option value="supplier">{roleTitle('supplier')}</option>
+            <option value="org_admin">{roleTitle('org_admin')}</option>
           </select>
         </div>
         <button
@@ -159,10 +167,10 @@ export default function OrganizationUsers() {
                       onChange={(e) => void patchUser(u.id, { role: e.target.value })}
                       className="rounded-lg border border-slate-300 px-2 py-1 text-sm"
                     >
-                      <option value="manager">manager</option>
-                      <option value="employee">employee</option>
-                      <option value="supplier">supplier</option>
-                      <option value="org_admin">org_admin</option>
+                      <option value="manager">{roleTitle('manager')}</option>
+                      <option value="employee">{roleTitle('employee')}</option>
+                      <option value="supplier">{roleTitle('supplier')}</option>
+                      <option value="org_admin">{roleTitle('org_admin')}</option>
                     </select>
                   </td>
                   <td className="px-4 py-3">

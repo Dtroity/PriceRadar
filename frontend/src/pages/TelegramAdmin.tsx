@@ -83,9 +83,9 @@ export default function TelegramAdmin() {
         telegram_chat_id: chatId.trim() === '' ? null : chatId.trim(),
         telegram_notify: notify,
       });
-      setNotifyMsg('OK');
+      setNotifyMsg(t('common.saved'));
     } catch (e) {
-      setNotifyMsg(e instanceof Error ? e.message : 'Failed');
+      setNotifyMsg(e instanceof Error ? e.message : t('common.errorGeneric'));
     } finally {
       setNotifySaving(false);
     }
@@ -95,9 +95,9 @@ export default function TelegramAdmin() {
     setNotifyMsg(null);
     try {
       await api.telegram.testMessage();
-      setNotifyMsg('OK');
+      setNotifyMsg(t('analytics.done'));
     } catch (e) {
-      setNotifyMsg(e instanceof Error ? e.message : 'Failed');
+      setNotifyMsg(e instanceof Error ? e.message : t('common.errorGeneric'));
     }
   };
 

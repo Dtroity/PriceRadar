@@ -102,7 +102,7 @@ export default function Suppliers({ embedded = false }: { embedded?: boolean }) 
       });
       setNewSupplierName('');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to create supplier');
+      setError(e instanceof Error ? e.message : t('suppliers.errorCreate'));
     } finally {
       setCreating(false);
     }
