@@ -19,8 +19,8 @@ let worker: Worker | null = null;
 export function startProductIntelligenceWorker() {
   worker = new Worker<{ organizationId?: string }>(
     'product-intelligence',
-    async (job) => {
-      if (job.name !== 'recalculate_product_scores') return;
+    async () => {
+      // Queue is single-purpose (recalculate_product_scores); BullMQ Job typings omit `name` in some versions.
       const orgs = await listOrganizationIds();
       let total = 0;
       for (const organizationId of orgs) {
