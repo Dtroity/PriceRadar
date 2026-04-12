@@ -73,6 +73,20 @@ export async function createIngestionJob(data: {
   return mapRow(rows[0]);
 }
 
+/** jsonb is usually an object; if driver returns a string, parse it */
+function parseJsonObjectField(v: unknown): Record<string, unknown> {
+  if (v && typeof v === 'object' && !Array.isArray(v)) return v as Record<string, unknown>;
+  if (typeof v === 'string') {
+    try {
+      const p = JSON.parse(v) as unknown;
+      if (p && typeof p === 'object' && !Array.isArray(p)) return p as Record<string, unknown>;
+    } catch {
+      /* ignore */
+    }
+  }
+  return {};
+}
+
 function mapRow(r: Record<string, unknown>): IngestionJobRow {
   return {
     id: r.id as string,
@@ -86,12 +100,12 @@ function mapRow(r: Record<string, unknown>): IngestionJobRow {
     suggested_kind: r.suggested_kind as string,
     confirmed_kind: (r.confirmed_kind as string) ?? null,
     status: r.status as IngestionStatus,
-    detection: (typeof r.detection === 'object' && r.detection ? r.detection : {}) as Record<string, unknown>,
+    detection: parseJsonObjectField(r.detection),
     bullmq_job_id: (r.bullmq_job_id as string) ?? null,
     document_id: (r.document_id as string) ?? null,
     price_list_id: (r.price_list_id as string) ?? null,
     error_message: (r.error_message as string) ?? null,
-    summary: (typeof r.summary === 'object' && r.summary ? r.summary : {}) as Record<string, unknown>,
+    summary: parseJsonObjectField(r.summary),
     duplicate_of_id: (r.duplicate_of_id as string) ?? null,
     created_at: r.created_at as Date,
     updated_at: r.updated_at as Date,

@@ -15,6 +15,19 @@ function boolLabel(v: unknown, t: TFn): string {
   return v === true ? t('ingestion.bool.yes') : v === false ? t('ingestion.bool.no') : '—';
 }
 
+function asRecord(v: unknown): Record<string, unknown> {
+  if (v && typeof v === 'object' && !Array.isArray(v)) return v as Record<string, unknown>;
+  if (typeof v === 'string') {
+    try {
+      const p = JSON.parse(v) as unknown;
+      if (p && typeof p === 'object' && !Array.isArray(p)) return p as Record<string, unknown>;
+    } catch {
+      /* ignore */
+    }
+  }
+  return {};
+}
+
 type Props = {
   detection: Record<string, unknown>;
   summary: Record<string, unknown>;
@@ -24,7 +37,9 @@ type Props = {
 /**
  * Human-readable detection/summary for the upload journal (no raw JSON for end users).
  */
-export default function IngestionRecognitionDetails({ detection, summary, t }: Props) {
+export default function IngestionRecognitionDetails({ detection: detIn, summary: sumIn, t }: Props) {
+  const detection = asRecord(detIn);
+  const summary = asRecord(sumIn);
   const reasons = Array.isArray(detection.reasons)
     ? (detection.reasons as string[]).filter((r) => typeof r === 'string')
     : [];

@@ -457,6 +457,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'products.searchPlaceholder': 'Поиск по названию…',
     'products.colIntel': 'Важность',
     'products.scoreShort': 'Балл',
+    'products.intelApiError': 'Сервер не ответил (обновите backend и миграции БД).',
     'products.mergeSection': 'Объединение дублей (перенос истории)',
     'products.mergeDescription':
       'Все связи (цены, изменения цен, накладные, склад, рецепты, заказы и т.д.) переносятся на выбранный товар. Отмеченные дубли удаляются. Только org_admin / super_admin.',
@@ -1106,6 +1107,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'products.searchPlaceholder': 'Search by name…',
     'products.colIntel': 'Relevance',
     'products.scoreShort': 'Score',
+    'products.intelApiError': 'Server error — rebuild backend and run DB migrations.',
     'products.mergeSection': 'Merge duplicates (full history)',
     'products.mergeDescription':
       'All links (prices, price changes, invoice lines, stock, recipes, orders, etc.) move to the target product. Selected duplicates are removed. org_admin / super_admin only.',

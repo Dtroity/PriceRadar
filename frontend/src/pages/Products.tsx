@@ -80,8 +80,11 @@ export default function Products() {
     };
   }, [intelTab]);
 
+  const [intelError, setIntelError] = useState('');
+
   const toggleFavorite = async (p: Product) => {
     const next = !p.is_favorite;
+    setIntelError('');
     try {
       await api.patchProductFavorite(p.id, next);
       const patch = (prev: Product[]) =>
@@ -89,8 +92,8 @@ export default function Products() {
       setProducts(patch);
       setTopProducts(patch);
       setSearchResults((prev) => (prev == null ? prev : patch(prev)));
-    } catch {
-      /* ignore */
+    } catch (e) {
+      setIntelError(e instanceof Error ? e.message : t('products.intelApiError'));
     }
   };
   const [itemsSortKey, setItemsSortKey] = useState<'raw_name' | 'normalized_name' | 'usage_count'>('usage_count');
@@ -162,6 +165,7 @@ export default function Products() {
     setMergeLoading(true);
     setMergeError('');
     setMergeMessage('');
+    setIntelError('');
     try {
       const res = await api.products();
       setProducts(res.products);
@@ -304,6 +308,7 @@ export default function Products() {
                 setIntelTab(tab);
                 setSearchInput('');
                 setSearchResults(null);
+                setIntelError('');
               }}
               className={`px-3 py-1.5 text-sm rounded-lg border ${
                 intelTab === tab && !searchInput.trim()
@@ -325,6 +330,11 @@ export default function Products() {
           />
           {searchLoading && <span className="text-xs text-slate-500">{t('common.loading')}</span>}
         </div>
+        {intelError && (
+          <p className="text-sm text-red-600" role="alert">
+            {intelError}
+          </p>
+        )}
         <div className="flex flex-wrap gap-2 items-center">
           <button
             type="button"
