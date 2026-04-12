@@ -15,3 +15,6 @@ export const NormalizeProductsSchema = z
     targetNormalizedName: z.string().min(1),
   })
   .strict();
+
+/** PATCH /products/:id/favorite */
+export const FavoriteProductSchema = z.object({ isFavorite: z.boolean() }).strict();

@@ -3,24 +3,48 @@ import { pool } from '../db/pool.js';
 import type { Product } from '../types/index.js';
 import { insertAudit } from './productAuditLog.js';
 import { refreshProductEmbedding } from '../services/embeddingService.js';
+import { mergeMetricsForProductMerge } from './productMetrics.js';
+
+const PRODUCT_INTELLIGENCE_SELECT = `
+  p.id, p.organization_id, p.name, p.normalized_name, p.is_priority, p.is_favorite, p.created_at,
+  COALESCE(pm.usage_count, 0)::int AS usage_count,
+  pm.last_used_at,
+  COALESCE(pm.priority_score, 0)::float8 AS priority_score,
+  COALESCE(pm.price_std_dev, 0)::float8 AS price_std_dev
+`;
+
+const PRODUCT_INTELLIGENCE_ORDER = `
+  ORDER BY p.is_favorite DESC NULLS LAST,
+           COALESCE(pm.priority_score, 0) DESC,
+           p.is_priority DESC,
+           p.name ASC
+`;
 
 export async function getAllProducts(organizationId?: string): Promise<Product[]> {
   if (organizationId) {
     const { rows } = await pool.query(
-      'SELECT id, name, normalized_name, is_priority, created_at FROM products WHERE organization_id = $1 ORDER BY is_priority DESC, name',
+      `SELECT ${PRODUCT_INTELLIGENCE_SELECT}
+       FROM products p
+       LEFT JOIN product_metrics pm ON pm.product_id = p.id
+       WHERE p.organization_id = $1
+       ${PRODUCT_INTELLIGENCE_ORDER}`,
       [organizationId]
     );
-    return rows;
+    return rows as Product[];
   }
   const { rows } = await pool.query(
-    'SELECT id, name, normalized_name, is_priority, created_at FROM products ORDER BY is_priority DESC, name'
+    `SELECT ${PRODUCT_INTELLIGENCE_SELECT}
+     FROM products p
+     LEFT JOIN product_metrics pm ON pm.product_id = p.id
+     ${PRODUCT_INTELLIGENCE_ORDER}`
   );
-  return rows;
+  return rows as Product[];
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
   const { rows } = await pool.query(
-    'SELECT id, name, normalized_name, is_priority, created_at FROM products WHERE id = $1',
+    `SELECT id, organization_id, name, normalized_name, is_priority, COALESCE(is_favorite, false) AS is_favorite, created_at
+     FROM products WHERE id = $1`,
     [id]
   );
   return rows[0] ?? null;
@@ -29,13 +53,15 @@ export async function getProductById(id: string): Promise<Product | null> {
 export async function findProductByNormalizedName(normalizedName: string, organizationId?: string): Promise<Product | null> {
   if (organizationId) {
     const { rows } = await pool.query(
-      'SELECT id, name, normalized_name, is_priority, created_at FROM products WHERE organization_id = $1 AND normalized_name = $2',
+      `SELECT id, organization_id, name, normalized_name, is_priority, COALESCE(is_favorite, false) AS is_favorite, created_at
+       FROM products WHERE organization_id = $1 AND normalized_name = $2`,
       [organizationId, normalizedName]
     );
     return rows[0] ?? null;
   }
   const { rows } = await pool.query(
-    'SELECT id, name, normalized_name, is_priority, created_at FROM products WHERE normalized_name = $1',
+    `SELECT id, organization_id, name, normalized_name, is_priority, COALESCE(is_favorite, false) AS is_favorite, created_at
+     FROM products WHERE normalized_name = $1`,
     [normalizedName]
   );
   return rows[0] ?? null;
@@ -50,7 +76,7 @@ export async function createProduct(
   if (organizationId) {
     const { rows } = await pool.query(
       `INSERT INTO products (organization_id, name, normalized_name, is_priority) VALUES ($1, $2, $3, $4)
-       RETURNING id, name, normalized_name, is_priority, created_at`,
+       RETURNING id, organization_id, name, normalized_name, is_priority, COALESCE(is_favorite, false) AS is_favorite, created_at`,
       [organizationId, name, normalizedName, isPriority]
     );
     const row = rows[0];
@@ -59,7 +85,7 @@ export async function createProduct(
   }
   const { rows } = await pool.query(
     `INSERT INTO products (name, normalized_name, is_priority) VALUES ($1, $2, $3)
-     RETURNING id, name, normalized_name, is_priority, created_at`,
+     RETURNING id, organization_id, name, normalized_name, is_priority, COALESCE(is_favorite, false) AS is_favorite, created_at`,
     [name, normalizedName, isPriority]
   );
   return rows[0];
@@ -131,7 +157,8 @@ async function findProductByNormalizedNameWithClient(
   organizationId: string
 ): Promise<Product | null> {
   const { rows } = await client.query<Product>(
-    'SELECT id, name, normalized_name, is_priority, created_at FROM products WHERE organization_id = $1 AND normalized_name = $2',
+    `SELECT id, organization_id, name, normalized_name, is_priority, COALESCE(is_favorite, false) AS is_favorite, created_at
+     FROM products WHERE organization_id = $1 AND normalized_name = $2`,
     [organizationId, normalizedName]
   );
   return rows[0] ?? null;
@@ -146,7 +173,7 @@ async function createProductWithClient(
 ): Promise<Product> {
   const { rows } = await client.query<Product>(
     `INSERT INTO products (organization_id, name, normalized_name, is_priority) VALUES ($1, $2, $3, $4)
-     RETURNING id, name, normalized_name, is_priority, created_at`,
+     RETURNING id, organization_id, name, normalized_name, is_priority, COALESCE(is_favorite, false) AS is_favorite, created_at`,
     [organizationId, name, normalizedName, isPriority]
   );
   return rows[0];
@@ -296,6 +323,7 @@ export async function mergeProducts(params: MergeProductsParams): Promise<MergeP
       ['prices', 'product_id'],
       ['price_changes', 'product_id'],
       ['document_items', 'product_id'],
+      ['procurement_items', 'product_id'],
       ['price_forecasts', 'product_id'],
       ['ai_feedback', 'product_id'],
       ['product_mapping', 'product_id'],
@@ -446,6 +474,14 @@ export async function mergeProducts(params: MergeProductsParams): Promise<MergeP
          AND a.product_id = $1::uuid
          AND a.id > b.id`,
       [tgt]
+    );
+
+    await mergeMetricsForProductMerge(client, organizationId, tgt, src);
+
+    await client.query(
+      `UPDATE products SET is_favorite = (SELECT BOOL_OR(is_favorite) FROM products WHERE id = ANY($1::uuid[]))
+       WHERE id = $2::uuid`,
+      [allIds, tgt]
     );
 
     await client.query(`DELETE FROM products WHERE organization_id = $1::uuid AND id = ANY($2::uuid[])`, [

@@ -14,6 +14,10 @@ import {
   startRecommendationsWorker,
 } from './workers/recommendationsWorker.js';
 import { IIKO_SYNC_ALL, iikoSyncQueue, startIikoSyncWorker } from './workers/iikoSyncWorker.js';
+import {
+  productIntelligenceQueue,
+  startProductIntelligenceWorker,
+} from './workers/productIntelligenceWorker.js';
 import { startTelegramBot } from './telegram/bot.js';
 import { ensureUploadDir } from './middleware/upload.js';
 import { runKnexMigrations } from './db/runKnexMigrations.js';
@@ -54,6 +58,7 @@ async function main() {
   startProcurementAutopilotWorker();
   startRecommendationsWorker();
   startIikoSyncWorker();
+  startProductIntelligenceWorker();
 
   await supplierScoringQueue.add('daily', { organizationId: '' }, { repeat: { pattern: '0 2 * * *' } }).catch(() => {});
   await procurementAutopilotQueue.add('tick', {}, { repeat: { pattern: '0 */6 * * *' } }).catch(() => {});
@@ -70,6 +75,13 @@ async function main() {
       'all-orgs',
       { organizationId: IIKO_SYNC_ALL },
       { repeat: { pattern: '0 6 * * *' }, jobId: 'iiko-sync-all-orgs' }
+    )
+    .catch(() => {});
+  await productIntelligenceQueue
+    .add(
+      'recalculate_product_scores',
+      {},
+      { repeat: { pattern: '0 */6 * * *' }, jobId: 'recalculate-product-scores' }
     )
     .catch(() => {});
   startTelegramBot();

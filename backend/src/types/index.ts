@@ -42,6 +42,13 @@ export interface Product {
   name: string;
   normalized_name: string;
   is_priority: boolean;
+  /** Product Intelligence — persisted on product row */
+  is_favorite?: boolean;
+  /** Joined from product_metrics when returned by list/search/top */
+  usage_count?: number;
+  last_used_at?: Date;
+  priority_score?: number;
+  price_std_dev?: number;
   created_at: Date;
 }
 

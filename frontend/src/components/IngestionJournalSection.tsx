@@ -2,6 +2,8 @@ import { Fragment, useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api, type IngestionRecord } from '../api/client';
 import { useT } from '../i18n/LocaleContext';
+import { ingestionKindLabel } from '../lib/ingestionLabels';
+import IngestionRecognitionDetails from './IngestionRecognitionDetails';
 
 function statusClass(status: string): string {
   if (status === 'completed') return 'text-emerald-700 bg-emerald-50';
@@ -35,7 +37,7 @@ export default function IngestionJournalSection({ isEmployee, refreshKey = 0 }: 
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -105,7 +107,7 @@ export default function IngestionJournalSection({ isEmployee, refreshKey = 0 }: 
                         </span>
                       </td>
                       <td className="px-3 py-2 text-slate-600">
-                        {row.confirmedKind || row.suggestedKind}
+                        {ingestionKindLabel(row.confirmedKind ?? row.suggestedKind ?? undefined, t)}
                       </td>
                       <td className="max-w-[280px] px-3 py-2 text-xs text-slate-600">
                         {row.errorMessage ? (
@@ -170,10 +172,12 @@ export default function IngestionJournalSection({ isEmployee, refreshKey = 0 }: 
                     </tr>
                     {expanded === row.id && (
                       <tr className="border-b border-slate-100 bg-slate-50/50">
-                        <td colSpan={6} className="px-4 py-3 font-mono text-xs text-slate-700">
-                          <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all">
-                            {JSON.stringify({ detection: row.detection, summary: row.summary }, null, 2)}
-                          </pre>
+                        <td colSpan={6} className="px-4 py-3 text-slate-700">
+                          <IngestionRecognitionDetails
+                            detection={row.detection ?? {}}
+                            summary={row.summary ?? {}}
+                            t={t}
+                          />
                         </td>
                       </tr>
                     )}

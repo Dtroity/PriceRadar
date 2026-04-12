@@ -13,6 +13,12 @@ import {
   findDuplicatePairs,
   runAutoMergeDuplicates,
 } from '../services/duplicateDetector.js';
+import {
+  getTopProducts,
+  markAsFavorite,
+  searchProducts,
+  updateProductMetrics,
+} from '../domains/product-intelligence/productIntelligence.service.js';
 
 export async function list(req: AuthRequest, res: Response) {
   try {
@@ -22,6 +28,47 @@ export async function list(req: AuthRequest, res: Response) {
   } catch (err) {
     logger.error({ err }, 'Failed to fetch products');
     return res.status(500).json({ error: 'Failed to fetch products' });
+  }
+}
+
+export async function search(req: AuthRequest, res: Response) {
+  try {
+    const orgId = req.user?.organizationId;
+    if (!orgId) return res.status(400).json({ error: 'organization required' });
+    const q = String(req.query.q ?? '');
+    const products = await searchProducts(orgId, q);
+    return res.json({ products });
+  } catch (err) {
+    logger.error({ err }, 'products search failed');
+    return res.status(500).json({ error: 'Search failed' });
+  }
+}
+
+export async function top(req: AuthRequest, res: Response) {
+  try {
+    const orgId = req.user?.organizationId;
+    if (!orgId) return res.status(400).json({ error: 'organization required' });
+    const products = await getTopProducts(orgId, 50);
+    return res.json({ products });
+  } catch (err) {
+    logger.error({ err }, 'products top failed');
+    return res.status(500).json({ error: 'Failed to load top products' });
+  }
+}
+
+export async function setFavorite(req: AuthRequest, res: Response) {
+  try {
+    const orgId = req.user?.organizationId;
+    if (!orgId) return res.status(400).json({ error: 'organization required' });
+    const { id } = req.params;
+    const { isFavorite } = req.body as { isFavorite?: boolean };
+    await markAsFavorite(id, Boolean(isFavorite), orgId);
+    return res.json({ ok: true });
+  } catch (err) {
+    const status = (err as Error & { status?: number }).status;
+    if (status === 404) return res.status(404).json({ error: 'Product not found' });
+    logger.error({ err }, 'Failed to set favorite');
+    return res.status(500).json({ error: 'Failed to update favorite' });
   }
 }
 
@@ -92,6 +139,8 @@ export async function mergeProducts(req: AuthRequest, res: Response) {
       },
       'products_merge'
     );
+
+    void updateProductMetrics(targetProductId).catch(() => {});
 
     return res.json({ ok: true, mergedSourceIds: result.mergedSourceIds });
   } catch (err) {

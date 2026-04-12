@@ -5,6 +5,7 @@ import { useT } from '../i18n/LocaleContext';
 import { pollIngestionUntilDone } from '../lib/pollIngestionUntilDone';
 import { pollPriceUploadJob } from '../lib/pollPriceUploadJob';
 import { cn } from '../lib/cn';
+import { formatIngestionReasonCode } from '../lib/ingestionLabels';
 
 type Toast = { id: number; tone: 'info' | 'ok' | 'err'; title: string; detail?: string };
 
@@ -317,11 +318,14 @@ export default function UnifiedIngestionUpload({ onCompleted }: Props) {
             </h2>
             <p className="mt-2 text-sm text-slate-600">{t('ingestion.confirmLead')}</p>
             {reasonList.length > 0 && (
-              <ul className="mt-2 list-inside list-disc text-xs text-slate-500">
-                {reasonList.map((r) => (
-                  <li key={r}>{r}</li>
-                ))}
-              </ul>
+              <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50/80 p-3">
+                <p className="text-xs font-medium text-slate-800">{t('ingestion.confirmReasonsLead')}</p>
+                <ul className="mt-2 list-disc space-y-1.5 pl-4 text-sm text-slate-700">
+                  {reasonList.map((r) => (
+                    <li key={r}>{formatIngestionReasonCode(r, t)}</li>
+                  ))}
+                </ul>
+              </div>
             )}
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <button

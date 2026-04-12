@@ -29,7 +29,7 @@ import { uploadMiddleware, ensureUploadDir } from '../middleware/upload.js';
 import { mountModuleRoutes } from '../modules/registry.js';
 import { requireModule } from '../modules/_shared/requireModule.js';
 import { validateBody } from '../middleware/validation.js';
-import { MergeProductsSchema, NormalizeProductsSchema } from '../validators/products.js';
+import { MergeProductsSchema, NormalizeProductsSchema, FavoriteProductSchema } from '../validators/products.js';
 import {
   AddItemSchema,
   CreateOrderSchema,
@@ -249,6 +249,9 @@ router.use((req, res, next) => {
     (method === 'GET' && p === '/auth/me') ||
     (method === 'POST' && p === '/auth/logout') ||
     (method === 'GET' && p === '/products') ||
+    (method === 'GET' && p === '/products/search') ||
+    (method === 'GET' && p === '/products/top') ||
+    (method === 'PATCH' && /^\/products\/[^/]+\/favorite$/.test(p)) ||
     (method === 'GET' && p === '/procurement/orders') ||
     (method === 'POST' && p === '/procurement/orders') ||
     (method === 'GET' && /^\/procurement\/orders\/[^/]+$/.test(p)) ||
@@ -344,6 +347,8 @@ router.delete(
 );
 router.post('/suppliers/:id/invite', requireRole(['super_admin', 'org_admin']), suppliersController.inviteSupplier);
 router.get('/suppliers/recommendations', requireModule('supplier_intelligence'), supplierRecommendationsController.recommendations);
+router.get('/products/search', productsController.search);
+router.get('/products/top', productsController.top);
 router.get('/products', productsController.list);
 router.get(
   '/products/duplicates',
@@ -364,6 +369,7 @@ router.post(
   productsController.mergeProducts
 );
 router.get('/products/:id/history', productsController.getProductHistory);
+router.patch('/products/:id/favorite', validateBody(FavoriteProductSchema), productsController.setFavorite);
 router.patch('/products/:id/priority', productsController.setPriority);
 
 // Price analytics (org context required)

@@ -7,6 +7,7 @@ import { generateRecommendations } from '../services/recommendationEngine.js';
 import { notify } from '../services/telegramNotifier.js';
 import { dispatchOrder } from '../services/orderDispatcher.js';
 import { logger } from '../utils/logger.js';
+import { recordProductUsage } from '../domains/product-intelligence/productIntelligence.service.js';
 
 function requireOrg(req: AuthRequest, res: Response): string | null {
   const orgId = req.user?.organizationId;
@@ -67,6 +68,7 @@ export async function createOrder(req: AuthRequest, res: Response) {
     notes: body.notes ?? null,
   });
   if (Array.isArray(body.items)) {
+    const usageSeen = new Set<string>();
     for (const it of body.items) {
       if (!it.product_id || it.quantity == null) continue;
       await ordersModel.addItem({
@@ -77,6 +79,10 @@ export async function createOrder(req: AuthRequest, res: Response) {
         targetPrice: it.target_price ?? null,
         supplierId: it.supplier_id ?? null,
       });
+      if (!usageSeen.has(it.product_id)) {
+        usageSeen.add(it.product_id);
+        void recordProductUsage(it.product_id, orgId).catch(() => {});
+      }
     }
   }
   return res.status(201).json(order);
@@ -168,6 +174,7 @@ export async function addItem(req: AuthRequest, res: Response) {
     targetPrice: body.target_price ?? null,
     supplierId: body.supplier_id ?? null,
   });
+  void recordProductUsage(body.product_id, orgId).catch(() => {});
   return res.status(201).json(item);
 }
 
@@ -234,6 +241,7 @@ export async function acceptRecommendation(req: AuthRequest, res: Response) {
     targetPrice: rec.suggested_price != null ? parseFloat(rec.suggested_price) : null,
     supplierId: rec.supplier_id,
   });
+  void recordProductUsage(rec.product_id, orgId).catch(() => {});
   await recModel.acceptRecommendation(rec.id, orgId, order.id);
   return res.json({ ok: true, order_id: order.id });
 }

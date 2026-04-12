@@ -135,6 +135,14 @@ export const api = {
     invite: (id: string) => request<{ ok: boolean }>(`/suppliers/${id}/invite`, { method: 'POST' }),
   },
   products: () => request<{ products: Product[] }>('/products'),
+  productsTop: () => request<{ products: Product[] }>('/products/top'),
+  productsSearch: (q: string) =>
+    request<{ products: Product[] }>(`/products/search?q=${encodeURIComponent(q)}`),
+  patchProductFavorite: (id: string, isFavorite: boolean) =>
+    request<{ ok: boolean }>(`/products/${id}/favorite`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isFavorite }),
+    }),
   setPriority: (id: string, isPriority: boolean) =>
     request<{ ok: boolean }>(`/products/${id}/priority`, {
       method: 'PATCH',
@@ -341,6 +349,11 @@ export interface Product {
   name: string;
   normalized_name: string;
   is_priority: boolean;
+  is_favorite?: boolean;
+  usage_count?: number;
+  priority_score?: number;
+  price_std_dev?: number;
+  last_used_at?: string;
   created_at: string;
 }
 

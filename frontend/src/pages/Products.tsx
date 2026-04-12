@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api, type Product, type ProductAuditEntry, type ProductNormalizationItem } from '../api/client';
 import { useT } from '../i18n/LocaleContext';
 import { displayProductName } from '../lib/displayProductName';
@@ -36,6 +36,63 @@ export default function Products() {
 
   const [productsSortKey, setProductsSortKey] = useState<'name' | 'id' | 'normalized_name'>('name');
   const [productsSortDir, setProductsSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const [intelTab, setIntelTab] = useState<'all' | 'favorites' | 'top'>('all');
+  const [topProducts, setTopProducts] = useState<Product[]>([]);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchResults, setSearchResults] = useState<Product[] | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  const displayedProducts = useMemo(() => {
+    if (searchInput.trim()) {
+      return searchResults ?? [];
+    }
+    if (intelTab === 'top') return topProducts;
+    if (intelTab === 'favorites') return products.filter((p) => p.is_favorite);
+    return products;
+  }, [intelTab, products, topProducts, searchInput, searchResults]);
+
+  useEffect(() => {
+    const q = searchInput.trim();
+    if (!q) {
+      setSearchResults(null);
+      return;
+    }
+    const handle = setTimeout(() => {
+      setSearchLoading(true);
+      api
+        .productsSearch(q)
+        .then((r) => setSearchResults(r.products))
+        .catch(() => setSearchResults([]))
+        .finally(() => setSearchLoading(false));
+    }, 350);
+    return () => clearTimeout(handle);
+  }, [searchInput]);
+
+  useEffect(() => {
+    if (intelTab !== 'top') return;
+    let cancelled = false;
+    api.productsTop().then((r) => {
+      if (!cancelled) setTopProducts(r.products);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [intelTab]);
+
+  const toggleFavorite = async (p: Product) => {
+    const next = !p.is_favorite;
+    try {
+      await api.patchProductFavorite(p.id, next);
+      const patch = (prev: Product[]) =>
+        prev.map((x) => (x.id === p.id ? { ...x, is_favorite: next } : x));
+      setProducts(patch);
+      setTopProducts(patch);
+      setSearchResults((prev) => (prev == null ? prev : patch(prev)));
+    } catch {
+      /* ignore */
+    }
+  };
   const [itemsSortKey, setItemsSortKey] = useState<'raw_name' | 'normalized_name' | 'usage_count'>('usage_count');
   const [itemsSortDir, setItemsSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -52,7 +109,7 @@ export default function Products() {
   const thBtn = 'inline-flex items-center gap-1 font-medium text-slate-600 hover:text-slate-900';
   const sortArrow = (on: boolean, dir: 'asc' | 'desc') => (on ? (dir === 'asc' ? '↑' : '↓') : '');
 
-  const sortedProducts = [...products].sort((a, b) => {
+  const sortedProducts = [...displayedProducts].sort((a, b) => {
     const mul = productsSortDir === 'asc' ? 1 : -1;
     if (productsSortKey === 'id') return a.id.localeCompare(b.id, 'ru') * mul;
     if (productsSortKey === 'normalized_name') {
@@ -238,6 +295,36 @@ export default function Products() {
       <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
         <h2 className="text-lg font-medium text-slate-800">{t('products.mergeSection')}</h2>
         <p className="text-sm text-slate-600">{t('products.mergeDescription')}</p>
+        <div className="flex flex-wrap gap-2 items-center border-b border-slate-100 pb-3 mb-2">
+          {(['all', 'favorites', 'top'] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => {
+                setIntelTab(tab);
+                setSearchInput('');
+                setSearchResults(null);
+              }}
+              className={`px-3 py-1.5 text-sm rounded-lg border ${
+                intelTab === tab && !searchInput.trim()
+                  ? 'bg-slate-800 text-white border-slate-800'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              {tab === 'all' && `📦 ${t('products.intelTabAll')}`}
+              {tab === 'favorites' && `⭐ ${t('products.intelTabFavorites')}`}
+              {tab === 'top' && `🔥 ${t('products.intelTabTop')}`}
+            </button>
+          ))}
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder={t('products.searchPlaceholder')}
+            className="min-w-[200px] flex-1 max-w-md px-3 py-1.5 text-sm border border-slate-300 rounded-lg"
+          />
+          {searchLoading && <span className="text-xs text-slate-500">{t('common.loading')}</span>}
+        </div>
         <div className="flex flex-wrap gap-2 items-center">
           <button
             type="button"
@@ -279,6 +366,7 @@ export default function Products() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
+                <th className="text-left p-2">{t('products.colIntel')}</th>
                 <th className="text-left p-2">{t('products.mergeSources')}</th>
                 <th className="text-left p-2">
                   <button type="button" className={thBtn} onClick={() => onProductsSort('id')}>
@@ -300,6 +388,26 @@ export default function Products() {
             <tbody>
               {sortedProducts.map((p) => (
                 <tr key={p.id} className="border-b border-slate-100">
+                  <td className="p-2 whitespace-nowrap">
+                    <button
+                      type="button"
+                      disabled={mergeLoading}
+                      onClick={() => void toggleFavorite(p)}
+                      className="text-lg leading-none mr-1 align-middle"
+                      title={t('products.intelTabFavorites')}
+                      aria-pressed={p.is_favorite}
+                    >
+                      {p.is_favorite ? '⭐' : '☆'}
+                    </button>
+                    {(p.priority_score ?? 0) >= 35 && (
+                      <span className="text-base" title={`${t('products.scoreShort')}: ${(p.priority_score ?? 0).toFixed(1)}`}>
+                        🔥
+                      </span>
+                    )}
+                    <span className="text-xs text-slate-500 ml-1">
+                      {(p.priority_score ?? 0) > 0 ? (p.priority_score ?? 0).toFixed(0) : '—'}
+                    </span>
+                  </td>
                   <td className="p-2">
                     <input
                       type="checkbox"
@@ -315,9 +423,9 @@ export default function Products() {
                   <td className="p-2 text-slate-600">{displayProductName(p.normalized_name)}</td>
                 </tr>
               ))}
-              {!products.length && (
+              {!displayedProducts.length && (
                 <tr>
-                  <td className="p-4 text-slate-500" colSpan={4}>
+                  <td className="p-4 text-slate-500" colSpan={5}>
                     {t('products.loadProducts')}
                   </td>
                 </tr>

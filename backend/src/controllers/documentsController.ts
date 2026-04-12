@@ -13,6 +13,7 @@ import { learnFromMapping } from '../modules/invoice-ai/aliasLearningService.js'
 import { recordFromPriceList } from '../services/supplierPricesHistory.js';
 import { stockUpdateQueue } from '../modules/stock/worker.js';
 import type { DocumentStatus, SourceType } from '../types/index.js';
+import { recordProductUsage } from '../domains/product-intelligence/productIntelligence.service.js';
 
 export async function upload(req: AuthRequest, res: Response) {
   try {
@@ -217,6 +218,14 @@ export async function confirm(req: AuthRequest, res: Response) {
     }
 
     await documentsModel.updateParsed(documentId, organizationId, { status: 'verified' });
+
+    const usageSeen = new Set<string>();
+    for (const it of items) {
+      if (!it.product_id || usageSeen.has(it.product_id)) continue;
+      usageSeen.add(it.product_id);
+      void recordProductUsage(it.product_id, organizationId).catch(() => {});
+    }
+
     await stockUpdateQueue.add('apply-invoice', { documentId, organizationId }).catch(() => {});
     return res.json({ message: 'Document verified', status: 'verified' });
   } catch (err) {
