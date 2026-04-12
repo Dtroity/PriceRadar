@@ -20,6 +20,7 @@ export default function NotificationsSettings() {
   const [vapid, setVapid] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+  const [pushBusy, setPushBusy] = useState(false);
 
   const load = () => {
     request<Settings>('/notifications/settings')
@@ -56,6 +57,8 @@ export default function NotificationsSettings() {
   };
 
   const enablePush = async () => {
+    setMsg('');
+    setErr('');
     if (!vapid) {
       setErr(t('notificationsSettings.errVapid'));
       return;
@@ -64,28 +67,42 @@ export default function NotificationsSettings() {
       setErr(t('notificationsSettings.errNoPush'));
       return;
     }
+    setPushBusy(true);
     try {
-      const reg = await navigator.serviceWorker.register('/sw.js');
-      const sub = await reg.pushManager.subscribe({
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') {
+        setErr(t('notificationsSettings.errPermissionDenied'));
+        return;
+      }
+
+      const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      await reg.update();
+      const ready = await navigator.serviceWorker.ready;
+      const sub = await ready.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapid),
       });
-      const keys = sub.getKey('p256dh');
-      const auth = sub.getKey('auth');
-      const enc = (b: ArrayBuffer | null) =>
-        b ? btoa(String.fromCharCode(...new Uint8Array(b))) : '';
+      const p256dhKey = sub.getKey('p256dh');
+      const authKey = sub.getKey('auth');
+      if (!p256dhKey || !authKey) {
+        setErr(t('notificationsSettings.errPushKeys'));
+        return;
+      }
       await request('/notifications/webpush/subscribe', {
         method: 'POST',
         body: JSON.stringify({
           endpoint: sub.endpoint,
-          p256dh: enc(keys),
-          auth: enc(auth),
+          p256dh: arrayBufferToBase64Url(p256dhKey),
+          auth: arrayBufferToBase64Url(authKey),
         }),
       });
       setMsg(t('notificationsSettings.subscribeSaved'));
       load();
     } catch (e) {
-      setErr(String((e as Error).message));
+      const msg = (e as Error)?.message?.trim();
+      setErr(msg || t('notificationsSettings.errSubscribeGeneric'));
+    } finally {
+      setPushBusy(false);
     }
   };
 
@@ -174,8 +191,13 @@ export default function NotificationsSettings() {
 
       <section className="border border-slate-200 rounded-lg p-4 bg-white space-y-3">
         <h2 className="font-medium">{t('notificationsSettings.sectionWebPush')}</h2>
-        <button type="button" className="px-3 py-2 bg-slate-800 text-white rounded text-sm" onClick={enablePush}>
-          {t('notificationsSettings.enableBrowserPush')}
+        <button
+          type="button"
+          disabled={pushBusy}
+          className="px-3 py-2 bg-slate-800 text-white rounded text-sm disabled:opacity-50"
+          onClick={() => void enablePush()}
+        >
+          {pushBusy ? t('common.loading') : t('notificationsSettings.enableBrowserPush')}
         </button>
         <p className="text-xs text-slate-500">
           {t('notificationsSettings.devicesCount')} {s.webpush_subscriptions?.length ?? 0}
@@ -244,4 +266,12 @@ function urlBase64ToUint8Array(base64String: string): BufferSource {
   const outputArray = new Uint8Array(rawData.length);
   for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
   return outputArray;
+}
+
+/** Keys for web-push / server must be base64url (not standard base64). */
+function arrayBufferToBase64Url(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]!);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }

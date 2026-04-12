@@ -47,7 +47,7 @@ export const DEFAULT_MODULES: Record<'free' | 'pro' | 'enterprise', readonly Pla
 };
 
 /** Always enabled with free tier so core document flow works */
-export const FREE_MODULE_EXTRAS: readonly PlatformModule[] = ['invoice_ai'];
+export const FREE_MODULE_EXTRAS: readonly PlatformModule[] = ['invoice_ai', 'notifications_push'];
 
 export function modulesToEnableForPlan(plan: 'free' | 'pro' | 'enterprise'): string[] {
   const set = new Set<string>(DEFAULT_MODULES[plan]);
@@ -61,6 +61,8 @@ export function modulesToEnableForPlan(plan: 'free' | 'pro' | 'enterprise'): str
  * requireModule('price_monitoring') passes if org has row `price_monitoring` OR `analytics`, etc.
  */
 export const ROUTE_MODULE_CANDIDATES: Record<string, readonly string[]> = {
+  /** Браузерные push: доступны при включённой аналитике / аномалиях (базовые тарифы) */
+  notifications_push: ['notifications_push', 'analytics', 'anomaly_detection'],
   price_monitoring: ['price_monitoring', 'analytics'],
   supplier_intelligence: ['supplier_intelligence', 'analytics'],
   forecast: ['forecast', 'anomaly_detection'],
